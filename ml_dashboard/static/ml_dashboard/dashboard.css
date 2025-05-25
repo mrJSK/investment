@@ -1,0 +1,138 @@
+body {
+  background: #f5f7fa;
+}
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dashboard-header i {
+  font-size: 2.2rem;
+  color: #1976d2;
+}
+.metrics-card {
+  border-radius: 18px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.07);
+  background: white;
+}
+.nav-tabs .nav-link.active {
+  font-weight: bold;
+  color: #1976d2 !important;
+  border-bottom: 2px solid #1976d2;
+}
+.feature-badge {
+  background: #e3f2fd;
+  color: #1976d2;
+  margin-right: 5px;
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 0.97em;
+}
+.collapse-toggle {
+  cursor: pointer;
+  color: #1976d2;
+}
+#training-complete {
+  font-size: 2rem;
+  color: #43a047;
+  font-weight: bold;
+  animation: flash 0.7s linear;
+}
+@keyframes flash {
+  0% {
+    background: #fff;
+  }
+  50% {
+    background: #d1ffd1;
+  }
+  100% {
+    background: #fff;
+  }
+}
+
+.select2-selection__choice {
+  background-color: #e3f2fd !important;
+  color: #1976d2 !important;
+  border: 1px solid #bbdefb !important;
+  border-radius: 14px !important;
+  font-size: 1.04em !important;
+  font-weight: 500;
+  display: inline-flex !important;
+  align-items: center;
+  min-width: 0;
+  width: auto !important;
+  max-width: 100%;
+  padding: 2px 11px 2px 9px !important;
+  margin-top: 4px;
+  margin-right: 3px;
+  margin-bottom: 2px;
+}
+.select2-selection__choice__remove {
+  color: #1976d2 !important;
+  margin-left: 5px;
+  font-size: 1.2em;
+  padding-right: 3px;
+}
+
+.feature-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 14px;
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+  box-shadow: 0 1px 4px #1976d215;
+  padding: 5px 12px 5px 10px;
+  margin: 0 8px 10px 0;
+  font-size: 1rem;
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
+  transition: box-shadow 0.2s;
+}
+.feature-card .feature-label {
+  font-weight: 600;
+  color: #1976d2;
+  font-size: 1.04em;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.feature-card .icon-btn {
+  background: none;
+  border: none;
+  color: #1976d2;
+  font-size: 1.08rem;
+  margin-left: 1px;
+  margin-right: 0;
+  border-radius: 50%;
+  padding: 3px 5px;
+  transition: background 0.2s;
+}
+.feature-card .icon-btn:hover {
+  background: #bbdefb;
+}
+.feature-card .remove-btn {
+  background: #ef5350;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.92em;
+  padding: 4px 14px 4px 12px;
+  margin-left: 2px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+.feature-card .remove-btn:hover {
+  background: #c62828;
+}
+.feature-settings-form label {
+  font-size: 0.97em;
+  color: #1a237e;
+  margin-bottom: 2px;
+}
+.feature-settings-form input {
+  font-size: 0.97em;
+  padding: 2px 6px;
+}

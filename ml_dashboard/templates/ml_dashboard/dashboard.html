@@ -1,0 +1,147 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ML Model Trainer Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Bootstrap & Select2 CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+      rel="stylesheet"
+    />
+    <link href="{% static 'ml_dashboard/dashboard.css' %}" rel="stylesheet" />
+  </head>
+  <body>
+    <div class="container py-5">
+      <div class="dashboard-header mb-4">
+        <i class="bi bi-bar-chart-line-fill"></i>
+        <h2 class="mb-0">ML Model Trainer Dashboard</h2>
+      </div>
+      <div class="row">
+        <div class="col-lg-6">
+          <form id="ml-form" class="bg-white p-4 rounded shadow-sm mb-3">
+            <div class="mb-3">
+              <label for="ml_model" class="form-label"
+                ><i class="bi bi-cpu"></i> ML Model</label
+              >
+              <select
+                class="form-select"
+                id="ml_model"
+                name="ml_model"
+                required
+              >
+                {% for m in ml_models %}
+                <option value="{{ m }}">{{ m }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="dataset" class="form-label"
+                ><i class="bi bi-database"></i> Dataset</label
+              >
+              <select class="form-select" id="dataset" name="dataset" required>
+                {% for d in datasets %}
+                <option value="{{ d }}">{{ d }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label"
+                ><i class="bi bi-columns-gap"></i> Add Features (TA-Lib)</label
+              >
+              <select
+                class="form-select"
+                id="feature-picker"
+                style="width: 100%"
+              >
+                <option></option>
+                {% for f in talib_features %}
+                <option value="{{ f.name }}">{{ f.display }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div id="feature-cards" class="mb-3 d-flex flex-wrap"></div>
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="bi bi-rocket-takeoff"></i> Train Model
+            </button>
+          </form>
+        </div>
+        <div class="col-lg-6">
+          <div id="progress-area" class="mb-3" style="display: none">
+            <label class="form-label">Training Progress</label>
+            <div class="progress" style="height: 26px">
+              <div
+                id="progress-bar"
+                class="progress-bar progress-bar-striped progress-bar-animated"
+                style="width: 0%"
+              >
+                0%
+              </div>
+            </div>
+            <div id="progress-stats" class="mt-2 text-secondary"></div>
+          </div>
+          <div id="result-area" class="mt-2"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Feature Settings Modal -->
+    <div
+      class="modal fade"
+      id="featureSettingsModal"
+      tabindex="-1"
+      aria-labelledby="featureSettingsModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+          <div class="modal-header py-2 px-3">
+            <h6 class="modal-title" id="featureSettingsModalLabel">
+              Configure Feature
+            </h6>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+              style="font-size: 1.2em"
+            ></button>
+          </div>
+          <div class="modal-body py-2 px-3">
+            <form id="featureSettingsForm"></form>
+          </div>
+          <div class="modal-footer py-2 px-3">
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              onclick="saveFeatureSettings()"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Scripts: jQuery, Bootstrap, Select2, your JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+      // Provide TALIB_ARGS to JS from Django context
+      const TALIB_ARGS = {
+        {% for f in talib_features %}
+        "{{ f.name }}": {{ f.args|safe }},
+        {% endfor %}
+      };
+    </script>
+    <script src="{% static 'ml_dashboard/dashboard.js' %}"></script>
+  </body>
+</html>
