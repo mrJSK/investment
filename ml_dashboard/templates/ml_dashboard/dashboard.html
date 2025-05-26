@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <title>ML Model Trainer Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <!-- Bootstrap & Select2 CSS -->
+    <!-- Bootstrap, Icons, Select2, Chart.js -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -19,8 +19,145 @@
       rel="stylesheet"
     />
     <link href="{% static 'ml_dashboard/dashboard.css' %}" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        background: #f7f9fc;
+        transition: background 0.25s, color 0.2s;
+      }
+      .navbar {
+        border-bottom: 1.5px solid #ececec;
+      }
+      .navbar-brand {
+        font-weight: bold;
+        letter-spacing: 1px;
+        font-size: 1.33rem;
+      }
+      .dashboard-header i {
+        font-size: 2.2rem;
+        color: #1976d2;
+      }
+      .metrics-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+      }
+      .result-table th,
+      .result-table td {
+        font-size: 0.99rem;
+      }
+      /* Dark mode */
+      body.darkmode {
+        background: #18191a !important;
+        color: #eee !important;
+      }
+      body.darkmode .bg-white,
+      body.darkmode .card,
+      body.darkmode .metrics-card,
+      body.darkmode .modal-content {
+        background: #232527 !important;
+        color: #eee !important;
+      }
+      body.darkmode .navbar {
+        background: #202124 !important;
+        border-color: #444;
+      }
+      body.darkmode .form-control,
+      body.darkmode .form-select {
+        background: #2d2f31 !important;
+        color: #eee !important;
+        border-color: #444;
+      }
+      body.darkmode .select2-container--default .select2-selection--single,
+      body.darkmode .select2-results__option {
+        background: #232527 !important;
+        color: #eee !important;
+      }
+      body.darkmode .modal-content {
+        background: #232527 !important;
+      }
+      .summary-label {
+        font-size: 1.04rem;
+        font-weight: 600;
+        color: #1976d2;
+      }
+      .summary-value {
+        font-weight: 500;
+      }
+      .tab-pane {
+        min-height: 150px;
+      }
+      .table thead th {
+        background: #f2f6fb;
+      }
+      body.darkmode .table thead th {
+        background: #24282c;
+      }
+      .table-sm td,
+      .table-sm th {
+        padding: 0.45rem 0.45rem;
+      }
+      .metrics-table {
+        margin-bottom: 0;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .feature-badge {
+        background: #ffe0b2;
+        color: #e65100;
+        border-radius: 7px;
+        font-size: 0.98em;
+        padding: 3px 10px;
+        margin: 2px;
+      }
+      .summary-section {
+        margin-bottom: 1rem;
+      }
+    </style>
   </head>
   <body>
+    <nav
+      class="navbar navbar-expand-lg navbar-light bg-white border-bottom mb-3"
+    >
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+          <i class="bi bi-bar-chart-line-fill text-primary"></i> ML ScreenerX
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div
+          class="collapse navbar-collapse justify-content-end"
+          id="navbarNav"
+        >
+          <ul class="navbar-nav align-items-center">
+            <li class="nav-item"><a class="nav-link" href="#">Dashboard</a></li>
+            <li class="nav-item">
+              <a class="nav-link" href="#">Create Alert</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#">ML Trainer</a>
+            </li>
+            <li class="nav-item"><a class="nav-link" href="#">Login</a></li>
+            <li class="nav-item ps-2">
+              <div class="form-check form-switch mb-0">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="darkSwitch"
+                />
+                <label class="form-check-label" for="darkSwitch">🌙</label>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
     <div class="container py-5">
       <div class="dashboard-header mb-4">
         <i class="bi bi-bar-chart-line-fill"></i>
@@ -89,7 +226,10 @@
             </div>
             <div id="progress-stats" class="mt-2 text-secondary"></div>
           </div>
-          <div id="result-area" class="mt-2"></div>
+          <div id="result-area" class="mt-2">
+            <!-- Results will be injected here -->
+            <!-- See dashboard.js for details -->
+          </div>
         </div>
       </div>
     </div>
@@ -130,10 +270,11 @@
         </div>
       </div>
     </div>
-    <!-- Scripts: jQuery, Bootstrap, Select2, your JS -->
+    <!-- Scripts: jQuery, Bootstrap, Select2, dashboard JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
       // Provide TALIB_ARGS to JS from Django context
       const TALIB_ARGS = {
@@ -143,5 +284,29 @@
       };
     </script>
     <script src="{% static 'ml_dashboard/dashboard.js' %}"></script>
+    <!-- Night Mode Script -->
+    <script>
+      // Night mode toggle (keeps state across reloads)
+      const DARK_KEY = "mlscreenerx_darkmode";
+      function setDarkMode(on) {
+        if (on) {
+          document.body.classList.add("darkmode");
+          localStorage.setItem(DARK_KEY, "1");
+        } else {
+          document.body.classList.remove("darkmode");
+          localStorage.removeItem(DARK_KEY);
+        }
+      }
+      document
+        .getElementById("darkSwitch")
+        .addEventListener("change", function (e) {
+          setDarkMode(e.target.checked);
+        });
+      // Restore dark mode on load
+      if (localStorage.getItem(DARK_KEY)) {
+        document.body.classList.add("darkmode");
+        document.getElementById("darkSwitch").checked = true;
+      }
+    </script>
   </body>
 </html>

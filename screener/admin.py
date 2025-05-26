@@ -1,14 +1,15 @@
 from django.contrib import admin
-from .models import Screener, ScreenerCondition
+from .models import Scan, Condition
 
-class ScreenerConditionInline(admin.TabularInline):
-    model = ScreenerCondition
+class ConditionInline(admin.TabularInline):
+    model = Condition
     extra = 1
 
-@admin.register(Screener)
-class ScreenerAdmin(admin.ModelAdmin):
-    inlines = [ScreenerConditionInline]
+@admin.register(Scan)
+class ScanAdmin(admin.ModelAdmin):
+    list_display = ("name", "timeframe", "segment", "created_at")
+    inlines = [ConditionInline]
 
-@admin.register(ScreenerCondition)
-class ScreenerConditionAdmin(admin.ModelAdmin):
-    list_display = ("screener", "left_indicator", "operator", "right_indicator", "constant", "logic_with_next")
+@admin.register(Condition)
+class ConditionAdmin(admin.ModelAdmin):
+    list_display = ("scan", "left_indicator", "operator", "right_indicator", "constant", "logic")

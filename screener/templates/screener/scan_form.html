@@ -1,0 +1,100 @@
+{% extends 'screener/base.html' %} {% block content %}
+<h2>{% if scan %}Edit Scan{% else %}New Scan{% endif %}</h2>
+<form method="post">
+  {% csrf_token %}
+  <div class="row">
+    <div class="col-md-4">
+      {{ form.name.label_tag }} {{ form.name }} {{ form.timeframe.label_tag }}
+      {{ form.timeframe }} {{ form.segment.label_tag }} {{ form.segment }}
+    </div>
+    <div class="col-md-8">
+      <h5>Conditions</h5>
+      <div id="conditions">
+        {{ formset.management_form }} {% for form in formset %}
+        <div class="condition-form row mb-2">
+          <div class="col-3">{{ form.left_indicator }}</div>
+          <div class="col-2">{{ form.operator }}</div>
+          <div class="col-3">{{ form.right_indicator }}{{ form.constant }}</div>
+          <div class="col-2">{{ form.logic }}</div>
+          <div class="col-2">
+            {% if forloop.first %}
+            <button id="add-condition" class="btn btn-sm btn-success">
+              Add Condition
+            </button>
+            {% else %}
+            <button class="btn btn-sm btn-danger remove-condition">
+              Remove
+            </button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <button type="submit" class="btn btn-primary mt-3">Save Scan</button>
+</form>
+
+<!-- JavaScript to clone/remove formset forms -->
+<script>
+  function cloneMore(selector, type) {
+    var newElement = $(selector).clone(true);
+    var total = parseInt($("#id_" + type + "-TOTAL_FORMS").val());
+    newElement.find(":input").each(function () {
+      var name = $(this)
+        .attr("name")
+        .replace("-" + (total - 1) + "-", "-" + total + "-");
+      var id = "id_" + name;
+      if ($(this).attr("type") !== "hidden") {
+        $(this).val("");
+      }
+      $(this).attr({ name: name, id: id }).removeAttr("checked");
+    });
+    newElement.find("label").each(function () {
+      var newFor = $(this)
+        .attr("for")
+        .replace("-" + (total - 1) + "-", "-" + total + "-");
+      $(this).attr("for", newFor);
+    });
+    total++;
+    $("#id_" + type + "-TOTAL_FORMS").val(total);
+    $(selector).after(newElement);
+  }
+
+  $("#add-condition").click(function (e) {
+    e.preventDefault();
+    // Clone the last condition form row
+    var last = $("#conditions .condition-form:last");
+    cloneMore(last, "condition");
+  });
+
+  $(document).on("click", ".remove-condition", function (e) {
+    e.preventDefault();
+    var count = $("#conditions .condition-form").length;
+    if (count > 1) {
+      $(this).closest(".condition-form").remove();
+      // Re-index remaining forms
+      $("#conditions .condition-form").each(function (index) {
+        $(this)
+          .find(":input")
+          .each(function () {
+            var name = $(this)
+              .attr("name")
+              .replace(/-\d+-/, "-" + index + "-");
+            var id = "id_" + name;
+            $(this).attr({ name: name, id: id });
+          });
+        $(this)
+          .find("label")
+          .each(function () {
+            var newFor = $(this)
+              .attr("for")
+              .replace(/-\d+-/, "-" + index + "-");
+            $(this).attr("for", newFor);
+          });
+      });
+      $("#id_condition-TOTAL_FORMS").val(count - 1);
+    }
+  });
+</script>
+{% endblock %}
