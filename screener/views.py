@@ -1,8 +1,12 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views import View
+from django.views.generic import TemplateView
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from .models import Scan
 from .forms import ScanForm, ConditionFormSet
 from .utils import run_scan
+import json
 
 class ScanListView(View):
     def get(self, request):
@@ -52,3 +56,18 @@ class ScanRunView(View):
             'results': results,
             'backtest': backtest
         })
+
+class DashboardView(TemplateView):
+    template_name = 'screener/dashboard.html'
+
+@csrf_exempt
+def ajax_scan(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        # Dummy results, replace with actual scan logic
+        results = [
+            {"symbol": "RELIANCE", "price": 3200, "change": 2.1, "volume": 10000, "matched": "RSI > 60", "signal": "Buy"},
+            {"symbol": "TCS", "price": 3580, "change": 1.5, "volume": 8000, "matched": "EMA50 > Close", "signal": ""},
+        ]
+        return JsonResponse({"results": results})
+    return JsonResponse({"error": "POST only"}, status=400)
