@@ -8,8 +8,6 @@
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
-      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-      crossorigin="anonymous"
     />
     <script src="https://cdn.tailwindcss.com"></script>
     <link
@@ -18,24 +16,20 @@
     />
     <style>
       body {
-        font-family: "Inter", sans-serif; /* Tailwind's default sans-serif is similar */
-        background-color: #111827; /* bg-gray-900 */
-        color: #d1d5db; /* text-gray-300 */
+        font-family: "Inter", sans-serif;
+        background-color: #111827;
+        color: #d1d5db;
       }
-      /* Keep custom token styles from previous UI */
       .filter-row-tokenized {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: 0.5rem;
         padding: 0.75rem;
-        border: 1px solid #374151; /* border-gray-700 */
+        border: 1px solid #374151;
         border-radius: 0.5rem;
         margin-bottom: 0.75rem;
-        background-color: #1f2937; /* bg-gray-800 */
-      }
-      .filter-row-tokenized:hover {
-        border-color: #4b5563;
+        background-color: #1f2937;
       }
       .builder-token,
       .token-mini {
@@ -46,46 +40,63 @@
         cursor: pointer;
         transition: background-color 0.2s;
         border: 1px solid transparent;
+        type: "button";
       }
       .builder-token {
         background-color: #3b82f6;
         color: white;
-      } /* Initial "Select" button */
+      }
       .builder-token:hover {
         background-color: #2563eb;
       }
       .token-mini {
         background-color: #4b5563;
         color: #e5e7eb;
-      } /* Default token */
+      }
       .token-mini:hover {
         background-color: #6b7280;
         border-color: #8b5cf6;
       }
       .token-tf {
-        background-color: #059669;
-        color: white;
-      } /* Timeframe */
+        background-color: #059669 !important;
+        color: white !important;
+      }
       .token-ind {
-        background-color: #6366f1;
-        color: white;
-      } /* Indicator name */
+        background-color: #6366f1 !important;
+        color: white !important;
+      }
       .token-field {
-        background-color: #a855f7;
-        color: white;
-      } /* Field */
-      .token-per {
-        background-color: #db2777;
-        color: white;
-      } /* Period */
+        background-color: #a855f7 !important;
+        color: white !important;
+      }
+      .token-per,
+      .token-fastperiod,
+      .token-slowperiod,
+      .token-signalperiod,
+      .token-multiplier,
+      .token-nbdev,
+      .token-fastkperiod,
+      .token-slowkperiod,
+      .token-slowdperiod {
+        background-color: #db2777 !important;
+        color: white !important;
+      } /* Shared style for period-like params */
       .token-num {
-        background-color: #f59e0b;
-        color: white;
-      } /* Number */
+        background-color: #f59e0b !important;
+        color: white !important;
+      }
       .token-op {
-        background-color: #ef4444;
-        color: white;
-      } /* Operator */
+        background-color: #ef4444 !important;
+        color: white !important;
+      }
+      .token-num-input {
+        display: inline-block !important;
+        width: 70px !important;
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.875rem !important;
+        line-height: 1.5 !important;
+        height: auto !important;
+      }
       .icon-btn {
         background: none;
         border: none;
@@ -98,37 +109,34 @@
       }
       .remove-filter-btn {
         color: #f87171;
-      } /* text-red-400 */
+      }
       .remove-filter-btn:hover {
         color: #ef4444;
-      } /* text-red-500 */
-
-      /* Tailwind / Custom Dark Theme for Bootstrap Modals */
+      }
       .modal-content {
         background-color: #1f2937;
         color: #d1d5db;
         border-color: #374151;
       }
-      .modal-header {
-        border-bottom-color: #374151;
-      }
+      .modal-header,
       .modal-footer {
-        border-top-color: #374151;
+        border-color: #374151;
       }
       .modal-title {
         color: #c7d2fe;
-      } /* text-indigo-200 */
+      }
       .list-group-item {
         background-color: #1f2937;
         border-color: #374151;
         color: #d1d5db;
+        cursor: pointer;
       }
       .list-group-item:hover {
         background-color: #374151;
       }
       .list-group-item.text-primary {
         color: #8b5cf6 !important;
-      } /* Tailwind purple-500 */
+      }
       .form-control,
       .form-select {
         background-color: #374151;
@@ -145,8 +153,6 @@
       .btn-close {
         filter: invert(1) grayscale(100%) brightness(200%);
       }
-
-      /* Custom scrollbar for filter list and results */
       .custom-scrollbar::-webkit-scrollbar {
         width: 8px;
       }
@@ -161,46 +167,41 @@
       .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #6b7280;
       }
-
-      /* Ensure overall layout elements use dark theme */
       .header-custom {
-        background-color: #1f2937; /* bg-gray-800 */
+        background-color: #1f2937;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.25);
       }
-      .sidebar-custom {
-        background-color: #1f2937; /* bg-gray-800 */
-        padding: 1.5rem;
-        border-radius: 0.75rem;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-          0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      }
+      .sidebar-custom,
       .content-custom {
-        background-color: #1f2937; /* bg-gray-800 */
+        background-color: #1f2937;
         padding: 1.5rem;
         border-radius: 0.75rem;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
           0 4px 6px -2px rgba(0, 0, 0, 0.05);
       }
       .table {
-        color: #d1d5db; /* text-gray-300 */
+        color: #d1d5db;
       }
       .table > :not(caption) > * > * {
         padding: 0.75rem 0.75rem;
         background-color: var(--bs-table-bg);
         border-bottom-width: 1px;
         box-shadow: inset 0 0 0 9999px var(--bs-table-accent-bg);
-        border-color: #374151; /* border-gray-700 */
+        border-color: #374151;
       }
       .table thead th {
-        background-color: #374151; /* bg-gray-700 */
-        color: #9ca3af; /* text-gray-400 */
+        background-color: #374151;
+        color: #9ca3af;
         text-transform: uppercase;
-        font-size: 0.75rem; /* text-xs */
+        font-size: 0.75rem;
         letter-spacing: 0.05em;
+        position: sticky;
+        top: 0;
+        z-index: 1;
       }
       .table-hover > tbody > tr:hover > * {
-        --bs-table-accent-bg: rgba(255, 255, 255, 0.075); /* Subtle hover */
-        color: #e5e7eb; /* text-gray-200 */
+        --bs-table-accent-bg: rgba(255, 255, 255, 0.075);
+        color: #e5e7eb;
       }
       details summary::-webkit-details-marker {
         display: none;
@@ -218,11 +219,11 @@
       <div
         class="container-fluid mx-auto px-4 sm:px-6 py-3 d-flex justify-content-between align-items-center"
       >
-        <a href="#" class="text-decoration-none">
-          <span class="fs-4 fw-bold" style="color: #a78bfa"
+        <a href="#" class="text-decoration-none"
+          ><span class="fs-4 fw-bold" style="color: #a78bfa"
             >Scan<span style="color: #2dd4bf">And</span>Trade</span
-          >
-        </a>
+          ></a
+        >
         <nav class="d-flex gap-2 sm:gap-4">
           <a
             href="#"
@@ -242,7 +243,7 @@
           >
           <a
             href="#"
-            class="text-decoration-none px-2 py-1 sm:px-3 sm:py-2 rounded-md"
+            class="text-decoration-none px-2 py-1 sm:px-3 sm:py2 rounded-md"
             style="color: #d1d5db; font-size: 0.9rem"
             >Alerts</a
           >
@@ -278,29 +279,30 @@
                 <option value="All NSE">All NSE</option>
               </select>
             </div>
-
             <p class="text-xs mb-3" style="font-size: 0.8rem; color: #9ca3af">
-              Stock passes <b>all</b> of the below filters:
+              Enter your scan conditions below. You can combine multiple
+              conditions using AND/OR operators. Use indicators, fields, and
+              numerical values to create complex scans. Click "Run" to see the
+              results based on the selected segment. You can also save your
+              scans for future use or backtest them against historical data.:
             </p>
-
             <div
               id="filter-list"
               class="space-y-3 mb-4 custom-scrollbar"
               style="
+                min-height: 100px;
                 max-height: calc(50vh - 80px);
                 overflow-y: auto;
                 padding-right: 0.5rem;
               "
             ></div>
-
             <button
               id="add-filter"
               class="btn btn-primary w-100 mb-4 fw-semibold"
               style="background-color: #3b82f6; border-color: #3b82f6"
             >
-              <i class="fas fa-plus-circle me-2"></i>Add Filter Condition
+              <i class="fas fa-plus-circle me-2"></i>Add Filter Condition Row
             </button>
-
             <div class="d-grid gap-2 text-sm">
               <div class="row gx-2">
                 <div class="col-12 col-sm-4 mb-2 mb-sm-0">
@@ -326,6 +328,7 @@
                 </div>
                 <div class="col-6 col-sm-4">
                   <button
+                    id="clearFiltersButton"
                     class="btn btn-secondary w-100 fw-semibold"
                     style="background-color: #6b7280; border-color: #6b7280"
                   >
@@ -368,7 +371,6 @@
                 </div>
               </div>
             </div>
-
             <div class="mt-4">
               <details class="rounded-lg" style="background-color: #1e293b">
                 <summary
@@ -412,7 +414,6 @@
             </div>
           </div>
         </div>
-
         <div class="col-lg-7">
           <div class="content-custom">
             <div
@@ -441,56 +442,32 @@
             </div>
             <div
               id="resultsBodyContainer"
-              class="custom-scrollbar"
+              class="custom-scrollbar table-responsive"
               style="max-height: calc(100vh - 220px); overflow-y: auto"
             >
               <table class="table table-hover fs-sm">
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Symbol</th>
-                    <th>LTP</th>
+                    <th>Name</th>
+                    <th>Timestamp</th>
+                    <th>Open</th>
+                    <th>High</th>
+                    <th>Low</th>
+                    <th>Close</th>
                     <th>% Chg</th>
                     <th>Volume</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="resultsTableBody">
-                  <tr>
-                    <td>1</td>
-                    <td class="fw-medium" style="color: #a78bfa">RELIANCE</td>
-                    <td>2850.75</td>
-                    <td style="color: #34d399">+1.25%</td>
-                    <td>5.2M</td>
-                    <td>
-                      <button class="icon-btn text-info">
-                        <i class="fas fa-chart-line"></i></button
-                      ><button class="icon-btn text-primary">
-                        <i class="fas fa-plus-square"></i>
-                      </button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>2</td>
-                    <td class="fw-medium" style="color: #a78bfa">INFY</td>
-                    <td>1505.10</td>
-                    <td style="color: #f87171">-0.50%</td>
-                    <td>3.1M</td>
-                    <td>
-                      <button class="icon-btn text-info">
-                        <i class="fas fa-chart-line"></i></button
-                      ><button class="icon-btn text-primary">
-                        <i class="fas fa-plus-square"></i>
-                      </button>
-                    </td>
-                  </tr>
-                  <tr id="noResultsRow" class="d-none">
+                  <tr id="initialMessageRow">
                     <td
-                      colspan="6"
+                      colspan="9"
                       class="text-center py-5"
                       style="color: #6b7280"
                     >
-                      No stocks match your criteria.
+                      No results yet. Add filters and click "Run Scan".
                     </td>
                   </tr>
                 </tbody>
@@ -505,7 +482,9 @@
               <button class="btn btn-sm btn-outline-secondary" disabled>
                 <i class="fas fa-angle-left"></i>
               </button>
-              <span style="color: #9ca3af">Page 1 of 1</span>
+              <span id="paginationInfo" style="color: #9ca3af"
+                >Page 1 of 1</span
+              >
               <button class="btn btn-sm btn-outline-secondary" disabled>
                 <i class="fas fa-angle-right"></i>
               </button>
@@ -543,7 +522,7 @@
               type="text"
               id="indicatorSearch"
               class="form-control mb-3"
-              placeholder="Search indicator, e.g. RSI, Close..."
+              placeholder="Search indicator..."
             />
             <ul
               class="list-group"
@@ -554,12 +533,11 @@
         </div>
       </div>
     </div>
-
     <div
       class="modal fade"
       id="indicatorConfigModal"
       tabindex="-1"
-      aria-labelledby="indicatorConfigModalLabel"
+      aria-labelledby="indicatorConfigModalLabelText"
       aria-hidden="true"
     >
       <div class="modal-dialog modal-dialog-scrollable">
@@ -579,27 +557,153 @@
             <div class="mb-3">
               <label for="indicatorConfigTimeframe" class="form-label"
                 >Timeframe:</label
-              >
-              <select
+              ><select
                 id="indicatorConfigTimeframe"
                 class="form-select"
               ></select>
             </div>
-            <div class="mb-3">
-              <label for="indicatorConfigField" class="form-label"
-                >Field (for some indicators like SMA, EMA):</label
-              >
-              <select id="indicatorConfigField" class="form-select"></select>
+            <div
+              class="mb-3"
+              id="indicatorConfigFieldGroup"
+              style="display: none"
+            >
+              <label for="indicatorConfigField" class="form-label">Field:</label
+              ><select id="indicatorConfigField" class="form-select"></select>
             </div>
-            <div class="mb-3" id="indicatorConfigPeriodGroup">
+            <div
+              class="mb-3"
+              id="indicatorConfigPeriodGroup"
+              style="display: none"
+            >
               <label for="indicatorConfigPeriod" class="form-label"
                 >Period:</label
-              >
-              <input
+              ><input
                 type="number"
                 id="indicatorConfigPeriod"
                 class="form-control"
                 value="20"
+                min="1"
+              />
+            </div>
+            <div
+              class="mb-3"
+              id="indicatorConfigFastPeriodGroup"
+              style="display: none"
+            >
+              <label for="indicatorConfigFastPeriod" class="form-label"
+                >Fast Period:</label
+              ><input
+                type="number"
+                id="indicatorConfigFastPeriod"
+                class="form-control"
+                value="12"
+                min="1"
+              />
+            </div>
+            <div
+              class="mb-3"
+              id="indicatorConfigSlowPeriodGroup"
+              style="display: none"
+            >
+              <label for="indicatorConfigSlowPeriod" class="form-label"
+                >Slow Period:</label
+              ><input
+                type="number"
+                id="indicatorConfigSlowPeriod"
+                class="form-control"
+                value="26"
+                min="1"
+              />
+            </div>
+            <div
+              class="mb-3"
+              id="indicatorConfigSignalPeriodGroup"
+              style="display: none"
+            >
+              <label for="indicatorConfigSignalPeriod" class="form-label"
+                >Signal Period:</label
+              ><input
+                type="number"
+                id="indicatorConfigSignalPeriod"
+                class="form-control"
+                value="9"
+                min="1"
+              />
+            </div>
+            <div
+              class="mb-3"
+              id="indicatorConfigMultiplierGroup"
+              style="display: none"
+            >
+              <label for="indicatorConfigMultiplier" class="form-label"
+                >Multiplier:</label
+              ><input
+                type="number"
+                id="indicatorConfigMultiplier"
+                class="form-control"
+                value="2"
+                step="0.1"
+                min="0.1"
+              />
+            </div>
+            <div
+              class="mb-3"
+              id="indicatorConfigNbdevGroup"
+              style="display: none"
+            >
+              <label for="indicatorConfigNbdev" class="form-label"
+                >StdDev (for BBANDS):</label
+              ><input
+                type="number"
+                id="indicatorConfigNbdev"
+                class="form-control"
+                value="2"
+                step="0.1"
+                min="0.1"
+              />
+            </div>
+            <div
+              class="mb-3"
+              id="indicatorConfigFastKPeriodGroup"
+              style="display: none"
+            >
+              <label for="indicatorConfigFastKPeriod" class="form-label"
+                >Fast K Period (STOCH):</label
+              ><input
+                type="number"
+                id="indicatorConfigFastKPeriod"
+                class="form-control"
+                value="14"
+                min="1"
+              />
+            </div>
+            <div
+              class="mb-3"
+              id="indicatorConfigSlowKPeriodGroup"
+              style="display: none"
+            >
+              <label for="indicatorConfigSlowKPeriod" class="form-label"
+                >Slow K Period (STOCH):</label
+              ><input
+                type="number"
+                id="indicatorConfigSlowKPeriod"
+                class="form-control"
+                value="3"
+                min="1"
+              />
+            </div>
+            <div
+              class="mb-3"
+              id="indicatorConfigSlowDPeriodGroup"
+              style="display: none"
+            >
+              <label for="indicatorConfigSlowDPeriod" class="form-label"
+                >Slow D Period (STOCH):</label
+              ><input
+                type="number"
+                id="indicatorConfigSlowDPeriod"
+                class="form-control"
+                value="3"
                 min="1"
               />
             </div>
@@ -610,9 +714,8 @@
               class="btn btn-secondary"
               data-bs-dismiss="modal"
             >
-              Cancel
-            </button>
-            <button
+              Cancel</button
+            ><button
               type="button"
               id="indicatorConfigDone"
               class="btn btn-primary"
@@ -624,7 +727,6 @@
         </div>
       </div>
     </div>
-
     <div
       class="modal fade"
       id="operatorModal"
@@ -653,13 +755,34 @@
         </div>
       </div>
     </div>
+    <div
+      class="modal fade"
+      id="continueQueryModal"
+      tabindex="-1"
+      aria-labelledby="continueQueryModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="continueQueryModalLabel">
+              Continue Query With...
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <ul class="list-group" id="continueQueryOptionsList"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
 
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-      crossorigin="anonymous"
-    ></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'screener/js/builder.js' %}"></script>
   </body>
 </html>
