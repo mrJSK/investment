@@ -1,7 +1,8 @@
 {% extends 'screener/base.html' %} {% load static %} {% block content %}
+<link rel="stylesheet" href="{% static 'screener/dashboard_css.css' %}" />
+<link rel="stylesheet" href="{% static 'screener/builder.css' %}" />
 <div class="container-fluid" style="max-width: 1200px">
   <div class="row">
-    <!-- Sidebar filters -->
     <div class="col-lg-3 mb-3">
       <div class="sidebar bg-white rounded shadow-sm p-4">
         <h6 class="mb-3">🔍 Quick Filters</h6>
@@ -10,7 +11,7 @@
           <option value="">All</option>
           <option value="Large Cap">Large Cap</option>
           <option value="Mid Cap">Mid Cap</option>
-          <option value="Small Cap">Small Cap</option>
+          <option value="Small Cap</option>
         </select>
         <label>Sector</label>
         <select class="form-select mb-2" id="sector">
@@ -31,7 +32,6 @@
       </div>
     </div>
     <div class="col-lg-9">
-      <!-- Screener summary -->
       <div class="mb-2 small d-flex align-items-center flex-wrap">
         <span>
           Stock passes <b>all</b> of the below filters in
@@ -52,21 +52,18 @@
           📋
         </button>
       </div>
-
-      <!-- Filter builder area -->
-      <form id="filterBuilder" autocomplete="off">
-        <div id="conditions"></div>
+      <form id="screener-form" autocomplete="off">
+        <div id="filter-list"></div>
         <div class="d-flex mb-3">
           <button
             class="btn btn-outline-primary me-2"
             type="button"
-            id="addFilter"
+            id="add-filter"
           >
             <b>+</b> Add Filter
           </button>
         </div>
       </form>
-      <!-- Action bar -->
       <div class="action-bar d-flex flex-wrap mb-3 gap-2">
         <button class="btn btn-success" type="button" id="runScan">
           <span>▶️</span> Run Scan
@@ -94,8 +91,6 @@
           <span>🔄</span> Backtest Results
         </button>
       </div>
-
-      <!-- Results Table -->
       <div class="card shadow-sm mb-5">
         <div
           class="card-header bg-primary text-white d-flex align-items-center justify-content-between"
@@ -132,7 +127,6 @@
   </div>
 </div>
 
-<!-- Indicator Picker Modal -->
 <div
   class="modal fade"
   id="indicatorModal"
@@ -143,9 +137,7 @@
   <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="indicatorModalLabel">
-          Select Indicator or Function
-        </h5>
+        <h5 class="modal-title">Select Indicator or Number</h5>
         <button
           type="button"
           class="btn-close"
@@ -168,198 +160,91 @@
     </div>
   </div>
 </div>
-
-<style>
-  .filter-card {
-    border-radius: 14px;
-    box-shadow: 0 2px 10px #ececec;
-    background: #fff;
-  }
-  .badge-buy {
-    background: #3adb76 !important;
-  }
-</style>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  // ==== DYNAMIC FILTER BUILDER ====
-  const allIndicators = [
-    "Open",
-    "High",
-    "Low",
-    "Close",
-    "Volume",
-    "SMA",
-    "EMA",
-    "VWAP",
-    "RSI",
-    "MACD",
-    "ATR",
-    "ADX",
-    "EFI",
-    "Supertrend",
-    "Bollinger Bands",
-    "Donchian Channel",
-    "Stochastic",
-    "ROC",
-    "CCI",
-    "MFI",
-    "OBV",
-    "Williams %R",
-    "Hull MA",
-    "Min(20, Close)",
-    "Max(20, Close)",
-    "SMA(volume, 20)",
-    "SMA(close, 9)",
-    "EMA(close, 21)",
-  ];
-  // New filter row template
-  function newConditionRow(idx = 0) {
-    return `
-  <div class="filter-card px-3 py-2 mb-2 d-flex align-items-center flex-wrap rounded shadow-sm bg-white gap-2 condition-row">
-    <span class="filter-index badge bg-light text-secondary" style="font-size:1em;">[${idx}]</span>
-    <input type="text" class="form-control indicator-select" style="width:130px;cursor:pointer" placeholder="Indicator" readonly>
-    <select class="form-select mx-2" style="width:80px">
-      <option value=">">&gt;</option>
-      <option value="<">&lt;</option>
-      <option value=">=">&ge;</option>
-      <option value="<=">&le;</option>
-      <option value="==">=</option>
-    </select>
-    <input type="text" class="form-control indicator-select" style="width:130px;cursor:pointer" placeholder="Indicator/Value" readonly>
-    <input type="text" class="form-control ms-1" style="width:90px" placeholder="Constant">
-    <select class="form-select mx-2" style="width:80px">
-      <option value="AND">AND</option>
-      <option value="OR">OR</option>
-    </select>
-    <button class="icon-btn remove-condition" type="button" title="Remove"><span>❌</span></button>
-    <button class="icon-btn" type="button" title="Copy"><span>📋</span></button>
-    <button class="icon-btn" type="button" title="Explain"><span>❓</span></button>
+<div
+  class="modal fade"
+  id="indicatorConfigModal"
+  tabindex="-1"
+  aria-labelledby="indicatorConfigModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="indicatorConfigModalLabel">
+          Configure Indicator
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label>Timeframe:</label>
+          <select id="indicatorConfigTimeframe" class="form-select">
+            <option>Daily</option>
+            <option>Weekly</option>
+            <option>15min</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label>Field:</label>
+          <select id="indicatorConfigField" class="form-select">
+            <option>Open</option>
+            <option>High</option>
+            <option>Low</option>
+            <option>Close</option>
+            <option>Volume</option>
+          </select>
+        </div>
+        <div class="mb-2" id="indicatorConfigPeriodGroup">
+          <label>Period:</label>
+          <input
+            type="number"
+            id="indicatorConfigPeriod"
+            class="form-control"
+            value="20"
+            min="1"
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="indicatorConfigDone">
+          Done
+        </button>
+      </div>
+    </div>
   </div>
-  `;
-  }
-  // Add first filter on load
-  let filterCount = 0;
-  function refreshIndices() {
-    document.querySelectorAll("#conditions .filter-card").forEach((row, i) => {
-      row.querySelector(".filter-index").textContent = `[${i}]`;
-    });
-  }
-  function addConditionRow() {
-    let container = document.getElementById("conditions");
-    container.insertAdjacentHTML("beforeend", newConditionRow(filterCount));
-    filterCount++;
-    refreshIndices();
-    bindFilterEvents();
-  }
-  function bindFilterEvents() {
-    document.querySelectorAll(".remove-condition").forEach((btn) => {
-      btn.onclick = function () {
-        this.closest(".condition-row").remove();
-        refreshIndices();
-        filterCount = document.querySelectorAll(
-          "#conditions .filter-card"
-        ).length;
-      };
-    });
-    document.querySelectorAll(".indicator-select").forEach((el) => {
-      el.onclick = function () {
-        activeInput = this;
-        renderIndicators("");
-        let modal = new bootstrap.Modal(
-          document.getElementById("indicatorModal")
-        );
-        modal.show();
-      };
-    });
-  }
-  document.getElementById("addFilter").onclick = addConditionRow;
-  addConditionRow(); // One filter row on load
-
-  // ==== INDICATOR PICKER MODAL ====
-  let activeInput = null;
-  function renderIndicators(filter = "") {
-    const list = document.getElementById("indicatorList");
-    list.innerHTML = "";
-    allIndicators
-      .filter((i) => i.toLowerCase().includes(filter.toLowerCase()))
-      .forEach((indicator) => {
-        const li = document.createElement("li");
-        li.className = "list-group-item list-group-item-action";
-        li.style.cursor = "pointer";
-        li.textContent = indicator;
-        li.onclick = () => selectIndicator(indicator);
-        list.appendChild(li);
-      });
-  }
-  document
-    .getElementById("indicatorSearch")
-    .addEventListener("input", function () {
-      renderIndicators(this.value);
-    });
-  function selectIndicator(indicator) {
-    if (activeInput) activeInput.value = indicator;
-    let modal = bootstrap.Modal.getInstance(
-      document.getElementById("indicatorModal")
-    );
-    modal.hide();
-  }
-  renderIndicators(""); // Initial render
-
-  // ==== AJAX RUN SCAN ====
-  document.getElementById("runScan").onclick = function (e) {
-    e.preventDefault();
-    let rows = document.querySelectorAll("#conditions .filter-card");
-    let filters = [];
-    rows.forEach((row) => {
-      let children = row.querySelectorAll("input,select");
-      filters.push({
-        left: children[0].value,
-        op: children[1].value,
-        right: children[2].value,
-        constant: children[3].value,
-        logic: children[4].value,
-      });
-    });
-    let payload = {
-      filters: filters,
-      market_cap: document.getElementById("marketCap").value,
-      sector: document.getElementById("sector").value,
-      volume: document.getElementById("volumeSlider").value,
-      segment: document.getElementById("segmentDropdown").value,
-    };
-    fetch("{% url 'ajax_scan' %}", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": "{{ csrf_token }}",
-      },
-      body: JSON.stringify(payload),
-    })
-      .then((resp) => resp.json())
-      .then((data) => {
-        let tbody = document.getElementById("resultsBody");
-        tbody.innerHTML = "";
-        if (data.results && data.results.length) {
-          data.results.forEach((row, idx) => {
-            tbody.innerHTML += `<tr>
-          <td>${idx + 1}</td>
-          <td>${row.symbol}</td>
-          <td>${row.price}</td>
-          <td>${row.change}</td>
-          <td>${row.volume}</td>
-          <td>${row.matched}</td>
-          <td>${
-            row.signal
-              ? `<span class="badge bg-success">${row.signal}</span>`
-              : ""
-          }</td>
-        </tr>`;
-          });
-        } else {
-          tbody.innerHTML =
-            '<tr><td colspan="7" class="text-center py-4 text-muted">No results.</td></tr>';
-        }
-      });
-  };
-</script>
+</div>
+<div
+  class="modal fade"
+  id="operatorModal"
+  tabindex="-1"
+  aria-labelledby="operatorModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Select Operation</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <ul
+          class="list-group"
+          id="operatorList"
+          style="max-height: 320px; overflow: auto"
+        ></ul>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'screener/builder.js' %}"></script>
+<script src="{% static 'screener/dashboard.js' %}"></script>
 {% endblock %}
