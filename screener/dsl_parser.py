@@ -21,6 +21,7 @@ query_grammar = r"""
     ?indicator: timeframe INDICATOR "(" [params] ")"   -> indicator_timeframe
               | INDICATOR "(" [params] ")"            -> indicator_no_timeframe
               | CANDLESTICK "(" ")"                   -> candlestick_pattern
+    postfix: "." ("macd" | "signal" | "hist")  -> indicator_expr
 
     ?params: param ("," param)*
     ?param: FIELD
@@ -56,6 +57,10 @@ parser = Lark(query_grammar, start='start', parser='lalr')
 # 2. AST Transformer
 
 class QueryTransformer(Transformer):
+
+    def part_access(self, items):
+        return str(items[0])
+    
     def logical_expr(self, items):
         return {
             "type": "logical",
@@ -70,23 +75,34 @@ class QueryTransformer(Transformer):
     def indicator_timeframe(self, items):
         tf = str(items[0])
         ind = str(items[1])
-        params = items[2:] if len(items) > 2 else []
+        
+        # Check if the last item is a string (e.g., "macd", "signal", "hist") for part
+        part = items[-1] if len(items) > 2 and isinstance(items[-1], str) else None
+        # All items between index 2 and end (excluding part if it exists) are params
+        params = items[2:-1] if part else items[2:]
+
         return {
             "type": "indicator",
             "timeframe": tf.lower(),
             "indicator": ind.upper(),
             "params": params,
+            "part": part
         }
 
     def indicator_no_timeframe(self, items):
         ind = str(items[0])
-        params = items[1:] if len(items) > 1 else []
+
+        part = items[-1] if len(items) > 1 and isinstance(items[-1], str) else None
+        params = items[1:-1] if part else items[1:]
+
         return {
             "type": "indicator",
             "timeframe": "default",
             "indicator": ind.upper(),
             "params": params,
+            "part": part
         }
+
 
     def candlestick_pattern(self, items):
         pattern = str(items[0])
