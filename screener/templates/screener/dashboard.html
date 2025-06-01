@@ -17,9 +17,10 @@
     <style>
       body {
         font-family: "Inter", sans-serif;
-        background-color: #111827;
-        color: #d1d5db;
+        background-color: #111827; /* Dark background */
+        color: #d1d5db; /* Light text */
       }
+      /* Styles for tokens if you were to display them (can be removed if not using tokenized display) */
       .filter-row-tokenized {
         display: flex;
         flex-wrap: wrap;
@@ -40,7 +41,6 @@
         cursor: pointer;
         transition: background-color 0.2s;
         border: 1px solid transparent;
-        type: "button";
       }
       .builder-token {
         background-color: #3b82f6;
@@ -57,6 +57,7 @@
         background-color: #6b7280;
         border-color: #8b5cf6;
       }
+      /* Specific token colors - can be simplified or removed if not rendering tokens */
       .token-tf {
         background-color: #059669 !important;
         color: white !important;
@@ -65,38 +66,46 @@
         background-color: #6366f1 !important;
         color: white !important;
       }
-      .token-field {
-        background-color: #a855f7 !important;
-        color: white !important;
+      /* ... other token styles ... */
+
+      /* Query Input Textarea Style */
+      #queryInput {
+        background-color: #2d3748; /* Darker than sidebar for contrast */
+        color: #e2e8f0; /* Light text for typing */
+        border: 1px solid #4a5568;
+        font-family: "Menlo", "Monaco", "Consolas", "Courier New", monospace;
+        font-size: 1em;
+        line-height: 1.6;
+        min-height: 120px; /* Good starting height */
       }
-      .token-per,
-      .token-fastperiod,
-      .token-slowperiod,
-      .token-signalperiod,
-      .token-multiplier,
-      .token-nbdev,
-      .token-fastkperiod,
-      .token-slowkperiod,
-      .token-slowdperiod {
-        background-color: #db2777 !important;
-        color: white !important;
-      } /* Shared style for period-like params */
-      .token-num {
-        background-color: #f59e0b !important;
-        color: white !important;
+      #queryInput:focus {
+        background-color: #374151;
+        border-color: #8b5cf6; /* Accent color on focus */
+        box-shadow: 0 0 0 0.25rem rgba(139, 92, 246, 0.25);
+        color: #f0f0f0;
       }
-      .token-op {
-        background-color: #ef4444 !important;
-        color: white !important;
+
+      /* Autocomplete Suggestion Box Style (JS will create this, but good to have base styles) */
+      #autocompleteSuggestionBox {
+        border: 1px solid #4a5568;
+        background-color: #2d3748;
+        max-width: 400px; /* Or adjust as needed */
       }
-      .token-num-input {
-        display: inline-block !important;
-        width: 70px !important;
-        padding: 0.25rem 0.5rem !important;
-        font-size: 0.875rem !important;
-        line-height: 1.5 !important;
-        height: auto !important;
+      #autocompleteSuggestionBox .list-group-item {
+        background-color: #2d3748;
+        color: #cbd5e0;
+        border-bottom: 1px solid #374151;
       }
+      #autocompleteSuggestionBox .list-group-item:last-child {
+        border-bottom: none;
+      }
+      #autocompleteSuggestionBox .list-group-item:hover,
+      #autocompleteSuggestionBox .list-group-item.active {
+        /* For keyboard navigation if added */
+        background-color: #3b82f6;
+        color: white;
+      }
+
       .icon-btn {
         background: none;
         border: none;
@@ -113,6 +122,7 @@
       .remove-filter-btn:hover {
         color: #ef4444;
       }
+
       .modal-content {
         background-color: #1f2937;
         color: #d1d5db;
@@ -219,11 +229,11 @@
       <div
         class="container-fluid mx-auto px-4 sm:px-6 py-3 d-flex justify-content-between align-items-center"
       >
-        <a href="#" class="text-decoration-none"
-          ><span class="fs-4 fw-bold" style="color: #a78bfa"
+        <a href="#" class="text-decoration-none">
+          <span class="fs-4 fw-bold" style="color: #a78bfa"
             >Scan<span style="color: #2dd4bf">And</span>Trade</span
-          ></a
-        >
+          >
+        </a>
         <nav class="d-flex gap-2 sm:gap-4">
           <a
             href="#"
@@ -243,7 +253,7 @@
           >
           <a
             href="#"
-            class="text-decoration-none px-2 py-1 sm:px-3 sm:py2 rounded-md"
+            class="text-decoration-none px-2 py-1 sm:px-3 sm:py-2 rounded-md"
             style="color: #d1d5db; font-size: 0.9rem"
             >Alerts</a
           >
@@ -280,29 +290,33 @@
               </select>
             </div>
             <p class="text-xs mb-3" style="font-size: 0.8rem; color: #9ca3af">
-              Enter your scan conditions below. You can combine multiple
-              conditions using AND/OR operators. Use indicators, fields, and
-              numerical values to create complex scans. Click "Run" to see the
-              results based on the selected segment. You can also save your
-              scans for future use or backtest them against historical data.:
+              Type your scan query below using indicators, numbers, and
+              operators like AND, OR, (), >, <. Indicator suggestions will
+              appear as you type. Select an indicator to configure its
+              parameters.
             </p>
-            <div
-              id="filter-list"
-              class="space-y-3 mb-4 custom-scrollbar"
-              style="
-                min-height: 100px;
-                max-height: calc(50vh - 80px);
-                overflow-y: auto;
-                padding-right: 0.5rem;
-              "
-            ></div>
+
+            <div id="queryInputContainer" class="mb-3 position-relative">
+              <textarea
+                id="queryInput"
+                class="form-control"
+                rows="6"
+                placeholder="e.g., (Daily SMA(Close, 20) > Daily SMA(Close, 50)) AND (Daily RSI(Close, 14) > 70)"
+              ></textarea>
+            </div>
+
             <button
               id="add-filter"
-              class="btn btn-primary w-100 mb-4 fw-semibold"
-              style="background-color: #3b82f6; border-color: #3b82f6"
+              class="btn btn-info w-100 mb-3 fw-semibold"
+              style="
+                background-color: #2dd4bf;
+                border-color: #2dd4bf;
+                color: #111827;
+              "
             >
-              <i class="fas fa-plus-circle me-2"></i>Add Filter Condition Row
+              <i class="fas fa-cogs me-2"></i>Parse Query (Dev Tool)
             </button>
+
             <div class="d-grid gap-2 text-sm">
               <div class="row gx-2">
                 <div class="col-12 col-sm-4 mb-2 mb-sm-0">
@@ -463,11 +477,11 @@
                 <tbody id="resultsTableBody">
                   <tr id="initialMessageRow">
                     <td
-                      colspan="9"
+                      colspan="10"
                       class="text-center py-5"
                       style="color: #6b7280"
                     >
-                      No results yet. Add filters and click "Run Scan".
+                      No results yet. Type a query and click "Run Scan".
                     </td>
                   </tr>
                 </tbody>
@@ -508,7 +522,7 @@
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="indicatorModalLabel">
-              Select Indicator or Number
+              Select Indicator
             </h5>
             <button
               type="button"
@@ -533,6 +547,7 @@
         </div>
       </div>
     </div>
+
     <div
       class="modal fade"
       id="indicatorConfigModal"
@@ -557,7 +572,8 @@
             <div class="mb-3">
               <label for="indicatorConfigTimeframe" class="form-label"
                 >Timeframe:</label
-              ><select
+              >
+              <select
                 id="indicatorConfigTimeframe"
                 class="form-select"
               ></select>
@@ -567,8 +583,10 @@
               id="indicatorConfigFieldGroup"
               style="display: none"
             >
-              <label for="indicatorConfigField" class="form-label">Field:</label
-              ><select id="indicatorConfigField" class="form-select"></select>
+              <label for="indicatorConfigField" class="form-label"
+                >Field:</label
+              >
+              <select id="indicatorConfigField" class="form-select"></select>
             </div>
             <div
               class="mb-3"
@@ -577,7 +595,8 @@
             >
               <label for="indicatorConfigPeriod" class="form-label"
                 >Period:</label
-              ><input
+              >
+              <input
                 type="number"
                 id="indicatorConfigPeriod"
                 class="form-control"
@@ -592,7 +611,8 @@
             >
               <label for="indicatorConfigFastPeriod" class="form-label"
                 >Fast Period:</label
-              ><input
+              >
+              <input
                 type="number"
                 id="indicatorConfigFastPeriod"
                 class="form-control"
@@ -607,7 +627,8 @@
             >
               <label for="indicatorConfigSlowPeriod" class="form-label"
                 >Slow Period:</label
-              ><input
+              >
+              <input
                 type="number"
                 id="indicatorConfigSlowPeriod"
                 class="form-control"
@@ -622,7 +643,8 @@
             >
               <label for="indicatorConfigSignalPeriod" class="form-label"
                 >Signal Period:</label
-              ><input
+              >
+              <input
                 type="number"
                 id="indicatorConfigSignalPeriod"
                 class="form-control"
@@ -637,7 +659,8 @@
             >
               <label for="indicatorConfigMultiplier" class="form-label"
                 >Multiplier:</label
-              ><input
+              >
+              <input
                 type="number"
                 id="indicatorConfigMultiplier"
                 class="form-control"
@@ -653,7 +676,8 @@
             >
               <label for="indicatorConfigNbdev" class="form-label"
                 >StdDev (for BBANDS):</label
-              ><input
+              >
+              <input
                 type="number"
                 id="indicatorConfigNbdev"
                 class="form-control"
@@ -669,7 +693,8 @@
             >
               <label for="indicatorConfigFastKPeriod" class="form-label"
                 >Fast K Period (STOCH):</label
-              ><input
+              >
+              <input
                 type="number"
                 id="indicatorConfigFastKPeriod"
                 class="form-control"
@@ -684,7 +709,8 @@
             >
               <label for="indicatorConfigSlowKPeriod" class="form-label"
                 >Slow K Period (STOCH):</label
-              ><input
+              >
+              <input
                 type="number"
                 id="indicatorConfigSlowKPeriod"
                 class="form-control"
@@ -699,7 +725,8 @@
             >
               <label for="indicatorConfigSlowDPeriod" class="form-label"
                 >Slow D Period (STOCH):</label
-              ><input
+              >
+              <input
                 type="number"
                 id="indicatorConfigSlowDPeriod"
                 class="form-control"
@@ -714,8 +741,9 @@
               class="btn btn-secondary"
               data-bs-dismiss="modal"
             >
-              Cancel</button
-            ><button
+              Cancel
+            </button>
+            <button
               type="button"
               id="indicatorConfigDone"
               class="btn btn-primary"
@@ -727,6 +755,7 @@
         </div>
       </div>
     </div>
+
     <div
       class="modal fade"
       id="operatorModal"
@@ -751,32 +780,6 @@
               id="operatorList"
               style="max-height: 320px; overflow-y: auto"
             ></ul>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div
-      class="modal fade"
-      id="continueQueryModal"
-      tabindex="-1"
-      aria-labelledby="continueQueryModalLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="continueQueryModalLabel">
-              Continue Query With...
-            </h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <ul class="list-group" id="continueQueryOptionsList"></ul>
           </div>
         </div>
       </div>
