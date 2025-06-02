@@ -46,3 +46,23 @@ class Condition(models.Model):
         right = self.right_indicator if self.right_indicator else str(self.constant)
         logic = f" {self.logic} ..." if self.logic else ""
         return f"{self.left_indicator} {self.operator} {right}{logic}"
+    
+    # screener/models.py
+from django.db import models
+
+class SavedScan(models.Model):
+    """
+    Stores a named saved scan. 
+    - name: the user‐provided name for the scan
+    - filters_json: JSON stringified representation of filter structure
+    - segment: which segment dropdown value was active ("Nifty 50", "Nifty 100", etc.)
+    - created_at: timestamp for ordering
+    """
+    name = models.CharField(max_length=100)
+    filters_json = models.JSONField()
+    segment = models.CharField(max_length=50)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.segment})"
+

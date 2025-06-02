@@ -11,12 +11,15 @@ from .views import (
     # screener_builder, # Commented out
     # ajax_scan # Commented out
 )
+from screener import views
 
 urlpatterns = [
     path('', DashboardView.as_view(), name='dashboard'),
     path('api/indicators/', indicator_list_api, name='api_indicator_list'),
     path('api/indicator_params/', indicator_params_api, name='api_indicator_params'), # Ensure view name matches
     path('api/run_screener/', run_screener, name='api_run_screener'),
+    path('api/saved_scans/', views.saved_scans_list, name='saved_scans_list'),
+    path('api/save_scan/', views.save_scan, name='save_scan'),
     
     # Commenting out URLs related to views that were removed for cleaning.
     # If you need the saved scan functionality, you'll need to ensure those views
