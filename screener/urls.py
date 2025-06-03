@@ -20,6 +20,7 @@ urlpatterns = [
     path('api/run_screener/', run_screener, name='api_run_screener'),
     path('api/saved_scans/', views.saved_scans_list, name='saved_scans_list'),
     path('api/save_scan/', views.save_scan, name='save_scan'),
+    path('backtest/<int:scan_id>/', views.backtest_view, name='backtest_view'),
     
     # Commenting out URLs related to views that were removed for cleaning.
     # If you need the saved scan functionality, you'll need to ensure those views

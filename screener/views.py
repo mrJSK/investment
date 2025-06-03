@@ -2,7 +2,7 @@
 
 from django.shortcuts import render
 from django.views.generic import TemplateView
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from screener.models import SavedScan
@@ -540,3 +540,69 @@ def save_scan(request):
             "created_at": scan.created_at.isoformat(),
         }
     })
+
+# --- Backtesting Logic ---
+
+def run_backtest_for_saved_scan(saved_scan):
+    """Run backtest for a SavedScan instance and return (trades, stats)."""
+    ast = saved_scan.filters_json
+    timeframe = get_display_timeframe_from_ast(ast)
+    symbols = list_symbols(timeframe)
+    trades = []
+    for symbol in symbols:
+        df = load_ohlcv(symbol, timeframe)
+        if df is None or df.empty:
+            continue
+        context = {f"{symbol}_{timeframe}": df}
+        try:
+            mask = eval_ast_node(symbol, ast, context)
+        except Exception:
+            continue
+        if isinstance(mask, bool):
+            mask = pd.Series([mask] * len(df), index=df.index)
+        else:
+            mask = pd.Series(mask).fillna(False)
+        for i, flag in enumerate(mask):
+            if not flag or i + 1 >= len(df):
+                continue
+            entry = df.iloc[i]
+            exit_row = df.iloc[i + 1]
+            pct = (exit_row['close'] - entry['close']) / entry['close'] * 100
+            trades.append({
+                'symbol': symbol,
+                'entry_date': entry.name.date(),
+                'exit_date': exit_row.name.date(),
+                'entry_price': float(entry['close']),
+                'exit_price': float(exit_row['close']),
+                'pct_return': round(pct, 2),
+            })
+    total = len(trades)
+    wins = sum(1 for t in trades if t['pct_return'] > 0)
+    stats = {
+        'total_trades': total,
+        'win_rate': round(wins / total * 100, 2) if total else 0,
+        'avg_return': round(sum(t['pct_return'] for t in trades) / total, 2) if total else 0,
+        'cumulative_return': round(sum(t['pct_return'] for t in trades), 2) if total else 0,
+    }
+    equity = 0
+    curve = []
+    for t in trades:
+        equity += t['pct_return']
+        curve.append({'date': t['exit_date'].isoformat(), 'equity': round(equity, 2)})
+    stats['equity_curve'] = curve
+    return trades, stats
+
+
+def backtest_view(request, scan_id):
+    """Render backtest results for a saved scan."""
+    try:
+        scan = SavedScan.objects.get(pk=scan_id)
+    except SavedScan.DoesNotExist:
+        return HttpResponse('Scan not found', status=404)
+    trades, stats = run_backtest_for_saved_scan(scan)
+    return render(request, 'screener/backtest.html', {
+        'scan': scan,
+        'trades': trades,
+        'stats': stats,
+    })
+
