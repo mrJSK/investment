@@ -262,6 +262,8 @@ def get_talib_params(fn_name):
             frontend_name = name
             if name == "timeperiod":
                 frontend_name = "period"
+            elif name == "real":
+                frontend_name = "field"
             elif name == "fastperiod":
                 frontend_name = "fast_period"
             elif name == "slowperiod":
