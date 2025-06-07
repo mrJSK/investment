@@ -938,42 +938,56 @@ function transformBackendStructureToQueryString(astNode) {
 // =================================================================
 function handleRunBacktest() {
   const overlay = document.getElementById("backtestOverlay");
+  const rawQuery = document.getElementById("queryInput").value.trim();
+
+  if (!rawQuery) {
+    alert("Please enter a query before running a backtest.");
+    return;
+  }
+
+  const ast_filter = transformQueryStringToBackendStructure(rawQuery);
+  if (!ast_filter || ast_filter.type === "PARSE_ERROR") {
+    alert("The query is invalid and cannot be backtested.");
+    return;
+  }
+
   if (overlay) overlay.style.display = "flex";
-  setTimeout(() => {
-    const dummyResults = {
-      summary: {
-        total_return_pct: -15.5,
-        total_trades: 152,
-        win_rate: 35.5,
-        profit_factor: 0.88,
-        max_drawdown_pct: 25.1,
-      },
-      trades: [
-        {
-          symbol: "RELIANCE",
-          entry_date: "2023-01-05",
-          exit_date: "2023-01-15",
-          pnl_pct: 5.1,
-          reason: "TP",
-        },
-        {
-          symbol: "HDFCBANK",
-          entry_date: "2023-02-10",
-          exit_date: "2023-02-12",
-          pnl_pct: -2.0,
-          reason: "SL",
-        },
-      ],
-      equity_curve: [
-        { datetime: "2023-01-01", equity: 100000 },
-        { datetime: "2023-01-15", equity: 105100 },
-        { datetime: "2023-02-12", equity: 103000 },
-        { datetime: "2023-03-20", equity: 98000 },
-      ],
-    };
-    renderBacktestResults(dummyResults);
-    if (overlay) overlay.style.display = "none";
-  }, 1500);
+
+  const payload = {
+    filters: ast_filter,
+    start_date: document.getElementById("backtestStartDate").value,
+    end_date: document.getElementById("backtestEndDate").value,
+    initial_capital: document.getElementById("backtestInitialCapital").value,
+    stop_loss_pct: document.getElementById("backtestStopLossPct").value,
+    take_profit_pct: document.getElementById("backtestTakeProfitPct").value,
+    position_size_pct: document.getElementById("backtestPositionSizePct").value,
+  };
+
+  fetch("/screener/api/run_backtest/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCookie("csrftoken"),
+    },
+    body: JSON.stringify(payload),
+  })
+    .then((resp) => {
+      if (!resp.ok) {
+        return resp.json().then((err) => Promise.reject(err));
+      }
+      return resp.json();
+    })
+    .then((data) => {
+      if (data.error) throw new Error(data.error);
+      renderBacktestResults(data);
+    })
+    .catch((err) => {
+      console.error("Backtest failed:", err);
+      alert(`Backtest failed: ${err.error || err.message}`);
+    })
+    .finally(() => {
+      if (overlay) overlay.style.display = "none";
+    });
 }
 
 function renderBacktestResults({

@@ -225,7 +225,6 @@ def my_custom_indicator(df, period=10, field='close'):
     sma_of_ema = talib.SMA(ema_series, timeperiod=int(period))
     return sma_of_ema.iloc[-1] if not sma_of_ema.empty else np.nan
 
-# --- FIX FOR EFI: Added 'field' parameter to match UI builder ---
 @register_custom_indicator("EFI")
 def elder_force_index(df, field='close', period=13):
     if not all(col in df.columns for col in ['close', 'volume']):
@@ -246,7 +245,6 @@ def elder_force_index(df, field='close', period=13):
     efi_period = talib.EMA(efi_1, timeperiod=int(period))
     return efi_period.iloc[-1] if not efi_period.empty and pd.notna(efi_period.iloc[-1]) else np.nan
 
-# Other custom indicators for MACD, BBANDS, STOCH parts... (code is unchanged)
 def _get_macd_part(df, part_index, field='close', fast_period=12, slow_period=26, signal_period=9):
     series_to_use = df[field].astype(float).values
     try:
@@ -315,7 +313,6 @@ def get_talib_params(fn_name):
             return [{'name': 'field', 'type': 'str', 'default': 'close'}, {'name': 'period', 'type': 'int', 'default': 20}, {'name': 'nbdev', 'type': 'float', 'default': 2.0}]
         elif fn_name_upper in ["STOCH_K", "STOCH_D"]:
             return [{'name': 'fastk_period', 'type': 'int', 'default': 14}, {'name': 'slowk_period', 'type': 'int', 'default': 3}, {'name': 'slowd_period', 'type': 'int', 'default': 3}]
-        # --- FIX FOR EFI: Added 'field' to the parameter schema ---
         elif fn_name_upper == "EFI":
             return [{'name': 'field', 'type': 'str', 'default': 'close'}, {'name': 'period', 'type': 'int', 'default': 13}]
         elif fn_name_upper == "MY_CUSTOM_INDICATOR":
@@ -387,7 +384,7 @@ def list_symbols(timeframe="daily"):
     """
     timeframe_lower = timeframe.lower()
     if timeframe_lower not in FOLDER_MAP:
-        return [] # Return empty list if timeframe is not supported
+        return []
 
     folder_name, suffix = FOLDER_MAP[timeframe_lower]
     tf_data_dir = os.path.join(DATA_DIR, folder_name)
@@ -397,18 +394,17 @@ def list_symbols(timeframe="daily"):
 
     return [fname[:-len(suffix)] for fname in os.listdir(tf_data_dir) if fname.endswith(suffix)]
 
-# The global SYMBOLS list is generated from daily data by default.
-# The run_screener view can dynamically get symbols for other timeframes if needed.
 SYMBOLS = list_symbols("daily")
 
-def load_ohlcv(symbol, timeframe="daily"):
+def load_ohlcv(symbol, timeframe="daily", end_date=None):
     """
     Load OHLCV data for a given symbol and timeframe.
     Returns a pandas.DataFrame, or None if the file is missing or corrupt.
+    If end_date is provided, loads data up to and including that date.
     """
     timeframe_lower = timeframe.lower()
     if timeframe_lower not in FOLDER_MAP:
-        return None # Return None if timeframe is not supported
+        return None
 
     folder_name, file_suffix = FOLDER_MAP[timeframe_lower]
     file_path = os.path.join(DATA_DIR, folder_name, f"{symbol}{file_suffix}")
@@ -418,22 +414,26 @@ def load_ohlcv(symbol, timeframe="daily"):
 
     try:
         df = pd.read_csv(file_path)
-        # Standardize column names to lowercase
         df.columns = [c.lower() for c in df.columns]
 
-        # Identify and set the date/time index
         time_col = 'timestamp' if 'timestamp' in df.columns else 'date'
         df[time_col] = pd.to_datetime(df[time_col], errors='coerce')
         df = df.set_index(time_col)
         
-        # Ensure the required OHLCV columns exist and drop rows with invalid data
         required_cols = ['open', 'high', 'low', 'close', 'volume']
         df = df.dropna(subset=required_cols)
         
+        if end_date:
+            if not isinstance(end_date, pd.Timestamp):
+                end_date = pd.to_datetime(end_date)
+            # Ensure the index is sorted before slicing with .loc for safety, though it should be.
+            df = df.sort_index()
+            df = df.loc[df.index <= end_date]
+            
         return df if not df.empty else None
 
-    except Exception:
-        # If anything goes wrong during file processing, return None
+    except Exception as e:
+        print(f"Error loading {symbol} data for {timeframe}: {e}")
         return None
 
 def call_indicator_logic(df, indicator_name, indicator_part=None, **kwargs_from_ast):
@@ -443,10 +443,24 @@ def call_indicator_logic(df, indicator_name, indicator_part=None, **kwargs_from_
         custom_func = CUSTOM_INDICATORS[name_upper]
         sig = inspect.signature(custom_func)
         valid_kwargs = {k: v for k, v in kwargs_from_ast.items() if k in sig.parameters}
-        return custom_func(df, **valid_kwargs)
-
+        # Custom indicators should be designed to return a Series or single value
+        result = custom_func(df, **valid_kwargs)
+        # If it's a single value, convert to series for consistency, or return as is and handle in eval_ast_node
+        if isinstance(result, (float, int, np.number)):
+            if pd.isna(result): return np.nan
+            # For consistent series handling, return a series if possible.
+            # Otherwise, just return the scalar and let eval_ast_node handle.
+            # Returning a series with one value might be problematic for backtrader strategy next()
+            # Let's return the scalar here, if it's a scalar.
+            return result # If custom_func explicitly returns a scalar.
+        return result # Assume it returns a series if not scalar
+    
+    # Handle direct OHLCV fields, which should return the full series slice, not just the last value.
     if name_upper in ["OPEN", "HIGH", "LOW", "CLOSE", "VOLUME"]:
-        return df[name_upper.lower()].iloc[-1]
+        if df.empty:
+            return pd.Series(dtype=float) # Return empty series if no data
+        # CRITICAL CHANGE: Return the entire series for the field
+        return df[name_upper.lower()]
 
     if not hasattr(talib, name_upper):
         raise ValueError(f"Unknown TA-Lib indicator: {name_upper}")
@@ -473,18 +487,40 @@ def call_indicator_logic(df, indicator_name, indicator_part=None, **kwargs_from_
             numeric_kwargs[ta_param] = ast_value
             if ta_param == 'nbdevup': numeric_kwargs['nbdevdn'] = ast_value
     
+    # Handle insufficient data for TA-Lib functions
+    min_periods = {}
+    for param_name, param in fn_sig.parameters.items():
+        # This is a heuristic for min_periods.
+        if param_name == 'timeperiod':
+             min_periods[param_name] = numeric_kwargs.get('timeperiod', 1)
+        elif param_name in ['fastperiod', 'slowperiod', 'signalperiod']:
+            min_periods[param_name] = max(numeric_kwargs.get(p, 1) for p in ['fastperiod', 'slowperiod', 'signalperiod'] if p in numeric_kwargs) if any(p in numeric_kwargs for p in ['fastperiod', 'slowperiod', 'signalperiod']) else 1
+
+    min_data_needed = max(min_periods.values()) if min_periods else 1
+    
+    if series_kwargs:
+        # Check the length of the actual series data that will be passed to TA-Lib
+        # This is tricky because `values` converts to numpy array, losing index info.
+        # A safer check is `len(df)` vs `min_data_needed`.
+        if len(df) < min_data_needed:
+            # print(f"DEBUG: Insufficient data for {indicator_name} ({len(df)} bars, need at least {min_data_needed}). Returning NaN series.")
+            return pd.Series(dtype=float) # Return empty series for insufficient data
+    else: # For indicators that don't take series_kwargs, just check df length
+        if len(df) < min_data_needed:
+            return pd.Series(dtype=float) # Return empty series
+
     result = fn(**series_kwargs, **numeric_kwargs)
     
     if isinstance(result, tuple):
-        # Default to first part if no specific part requested
         part_idx_map = {'upper': 0, 'middle': 1, 'lower': 2, 'macd': 0, 'signal': 1, 'hist': 2, 'k':0, 'd':1}
         part_idx = part_idx_map.get(indicator_part.lower() if indicator_part else '', 0)
-        out_series = result[part_idx]
+        out_series = pd.Series(result[part_idx], index=df.index) # Convert numpy array to pandas Series with correct index
     else:
-        out_series = result
+        out_series = pd.Series(result, index=df.index) # Convert numpy array to pandas Series with correct index
 
-    return out_series[-1] if hasattr(out_series, '__len__') and len(out_series) > 0 else np.nan
+    # CRITICAL CHANGE: Return the entire series, not just the last value
+    return out_series
 
-# Convenience wrapper, though not directly used by views anymore
+# evaluate_operation is not used anymore directly, but keep it for reference.
 def evaluate_operation(symbol: str, indicator_name: str, indicator_part: str=None, **kwargs):
     raise NotImplementedError("Use eval_ast_node() in views.py instead.")
