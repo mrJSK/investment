@@ -9,41 +9,170 @@ import numpy as np
 import talib
 
 # --------- Friendly Display Names (ensure this is comprehensive) ---------
+# --------- Friendly Display Names (ensure this is comprehensive) ---------
 TA_INDICATOR_LABELS = {
-    "AD": "Chaikin A/D Line", "ADOSC": "Chaikin A/D Oscillator", "ADX": "Average Directional Movement Index",
-    "ADXR": "Average Directional Movement Index Rating", "APO": "Absolute Price Oscillator", "AROON": "Aroon",
-    "AROONOSC": "Aroon Oscillator", "ATR": "Average True Range", "AVGPRICE": "Average Price",
-    "BBANDS": "Bollinger Bands (Base)", "BETA": "Beta", "BOP": "Balance Of Power", "CCI": "Commodity Channel Index",
-    "CMO": "Chande Momentum Oscillator", "CORREL": "Pearson's Correlation Coefficient (r)",
-    "DEMA": "Double Exponential Moving Average", "DX": "Directional Movement Index",
-    "EMA": "Exponential Moving Average", "HT_DCPERIOD": "Hilbert Transform - Dominant Cycle Period",
-    "HT_DCPHASE": "Hilbert Transform - Dominant Cycle Phase", "HT_PHASOR": "Hilbert Transform - Phasor Components",
-    "HT_SINE": "Hilbert Transform - SineWave", "HT_TRENDLINE": "Hilbert Transform - Instantaneous Trendline",
-    "HT_TRENDMODE": "Hilbert Transform - Trend vs Cycle Mode", "KAMA": "Kaufman Adaptive Moving Average",
-    "LINEARREG": "Linear Regression", "LINEARREG_ANGLE": "Linear Regression Angle",
-    "LINEARREG_INTERCEPT": "Linear Regression Intercept", "LINEARREG_SLOPE": "Linear Regression Slope",
-    "MA": "Moving average", "MACD": "Moving Average Convergence/Divergence (Base)",
-    "MACDEXT": "MACD with controllable MA type", "MACDFIX": "Moving Average Convergence/Divergence Fix 12/26",
-    "MAMA": "MESA Adaptive Moving Average", "MAX": "Highest value over a specified period",
-    "MAXINDEX": "Index of highest value over a specified period", "MEDPRICE": "Median Price",
-    "MFI": "Money Flow Index", "MIDPOINT": "MidPoint over period", "MIDPRICE": "Midpoint Price over period",
-    "MIN": "Lowest value over a specified period", "MININDEX": "Index of lowest value over a specified period",
+    # Overlap Studies
+    "BBANDS": "Bollinger Bands",
+    "DEMA": "Double Exponential Moving Average",
+    "EMA": "Exponential Moving Average",
+    "HT_TRENDLINE": "Hilbert Transform - Instantaneous Trendline",
+    "KAMA": "Kaufman Adaptive Moving Average",
+    "MA": "Moving Average",
+    "MAMA": "MESA Adaptive Moving Average",
+    "MIDPOINT": "MidPoint over period",
+    "MIDPRICE": "Midpoint Price over period",
+    "SAR": "Parabolic SAR",
+    "SAREXT": "Parabolic SAR - Extended",
+    "SMA": "Simple Moving Average",
+    "T3": "Triple Exponential Moving Average (T3)",
+    "TEMA": "Triple Exponential Moving Average",
+    "TRIMA": "Triangular Moving Average",
+    "WMA": "Weighted Moving Average",
+
+    # Momentum Indicators
+    "ADX": "Average Directional Movement Index",
+    "ADXR": "Average Directional Movement Index Rating",
+    "APO": "Absolute Price Oscillator",
+    "AROON": "Aroon",
+    "AROONOSC": "Aroon Oscillator",
+    "BOP": "Balance Of Power",
+    "CCI": "Commodity Channel Index",
+    "CMO": "Chande Momentum Oscillator",
+    "DX": "Directional Movement Index",
+    "MACD": "Moving Average Convergence/Divergence",
+    "MACDEXT": "MACD with controllable MA type",
+    "MACDFIX": "Moving Average Convergence/Divergence Fix 12/26",
+    "MFI": "Money Flow Index",
+    "MINUS_DI": "Minus Directional Indicator",
+    "MINUS_DM": "Minus Directional Movement",
+    "MOM": "Momentum",
+    "PLUS_DI": "Plus Directional Indicator",
+    "PLUS_DM": "Plus Directional Movement",
+    "PPO": "Percentage Price Oscillator",
+    "ROC": "Rate of change : ((price/prevPrice)-1)*100",
+    "ROCP": "Rate of change Percentage: (price-prevPrice)/prevPrice",
+    "ROCR": "Rate of change ratio: (price/prevPrice)",
+    "ROCR100": "Rate of change ratio 100 scale: (price/prevPrice)*100",
+    "RSI": "Relative Strength Index",
+    "STOCH": "Stochastic",
+    "STOCHF": "Stochastic Fast",
+    "STOCHRSI": "Stochastic Relative Strength Index",
+    "TRIX": "1-day Rate-Of-Change (ROC) of a Triple Smooth EMA",
+    "ULTOSC": "Ultimate Oscillator",
+    "WILLR": "Williams' %R",
+
+    # Volume Indicators
+    "AD": "Chaikin A/D Line",
+    "ADOSC": "Chaikin A/D Oscillator",
+    "OBV": "On Balance Volume",
+
+    # Volatility Indicators
+    "ATR": "Average True Range",
+    "NATR": "Normalized Average True Range",
+    "TRANGE": "True Range",
+
+    # Price Transform
+    "AVGPRICE": "Average Price",
+    "MEDPRICE": "Median Price",
+    "TYPPRICE": "Typical Price",
+    "WCLPRICE": "Weighted Close Price",
+
+    # Cycle Indicators
+    "HT_DCPERIOD": "Hilbert Transform - Dominant Cycle Period",
+    "HT_DCPHASE": "Hilbert Transform - Dominant Cycle Phase",
+    "HT_PHASOR": "Hilbert Transform - Phasor Components",
+    "HT_SINE": "Hilbert Transform - SineWave",
+    "HT_TRENDMODE": "Hilbert Transform - Trend vs Cycle Mode",
+
+    # Statistic Functions
+    "BETA": "Beta",
+    "CORREL": "Pearson's Correlation Coefficient (r)",
+    "LINEARREG": "Linear Regression",
+    "LINEARREG_ANGLE": "Linear Regression Angle",
+    "LINEARREG_INTERCEPT": "Linear Regression Intercept",
+    "LINEARREG_SLOPE": "Linear Regression Slope",
+    "STDDEV": "Standard Deviation",
+    "TSF": "Time Series Forecast",
+    "VAR": "Variance",
+
+    # Math Transform & Operators
+    "MAX": "Highest value over a specified period",
+    "MAXINDEX": "Index of highest value over a specified period",
+    "MIN": "Lowest value over a specified period",
+    "MININDEX": "Index of lowest value over a specified period",
     "MINMAX": "Lowest and highest values over a specified period",
     "MINMAXINDEX": "Indexes of lowest and highest values over a specified period",
-    "MINUS_DI": "Minus Directional Indicator", "MINUS_DM": "Minus Directional Movement", "MOM": "Momentum",
-    "NATR": "Normalized Average True Range", "OBV": "On Balance Volume", "PLUS_DI": "Plus Directional Indicator",
-    "PLUS_DM": "Plus Directional Movement", "PPO": "Percentage Price Oscillator",
-    "ROC": "Rate of change : ((price/prevPrice)-1)*100", "ROCP": "Rate of change Percentage: (price-prevPrice)/prevPrice",
-    "ROCR": "Rate of change ratio: (price/prevPrice)", "ROCR100": "Rate of change ratio 100 scale: (price/prevPrice)*100",
-    "RSI": "Relative Strength Index", "SAR": "Parabolic SAR", "SAREXT": "Parabolic SAR - Extended",
-    "SMA": "Simple Moving Average", "STDDEV": "Standard Deviation", "STOCH": "Stochastic (Base)",
-    "STOCHF": "Stochastic Fast", "STOCHRSI": "Stochastic Relative Strength Index", "SUM": "Summation",
-    "T3": "Triple Exponential Moving Average (T3)", "TEMA": "Triple Exponential Moving Average",
-    "TRANGE": "True Range", "TRIMA": "Triangular Moving Average",
-    "TRIX": "1-day Rate-Of-Change (ROC) of a Triple Smooth EMA", "TSF": "Time Series Forecast",
-    "TYPPRICE": "Typical Price", "ULTOSC": "Ultimate Oscillator", "VAR": "Variance",
-    "WCLPRICE": "Weighted Close Price", "WILLR": "Williams' %R", "WMA": "Weighted Moving Average",
-    "CLOSE": "Close Price", "OPEN": "Open Price", "HIGH": "High Price", "LOW": "Low Price", "VOLUME": "Volume",
+    "SUM": "Summation",
+
+    # Pattern Recognition
+    "CDL2CROWS": "Two Crows",
+    "CDL3BLACKCROWS": "Three Black Crows",
+    "CDL3INSIDE": "Three Inside Up/Down",
+    "CDL3LINESTRIKE": "Three-Line Strike",
+    "CDL3OUTSIDE": "Three Outside Up/Down",
+    "CDL3STARSINSOUTH": "Three Stars In The South",
+    "CDL3WHITESOLDIERS": "Three Advancing White Soldiers",
+    "CDLABANDONEDBABY": "Abandoned Baby",
+    "CDLADVANCEBLOCK": "Advance Block",
+    "CDLBELTHOLD": "Belt-hold",
+    "CDLBREAKAWAY": "Breakaway",
+    "CDLCLOSINGMARUBOZU": "Closing Marubozu",
+    "CDLCONCEALBABYSWALL": "Concealing Baby Swallow",
+    "CDLCOUNTERATTACK": "Counterattack",
+    "CDLDARKCLOUDCOVER": "Dark Cloud Cover",
+    "CDLDOJI": "Doji",
+    "CDLDOJISTAR": "Doji Star",
+    "CDLDRAGONFLYDOJI": "Dragonfly Doji",
+    "CDLENGULFING": "Engulfing Pattern",
+    "CDLEVENINGDOJISTAR": "Evening Doji Star",
+    "CDLEVENINGSTAR": "Evening Star",
+    "CDLGAPSIDESIDEWHITE": "Up/Down-gap side-by-side white lines",
+    "CDLGRAVESTONEDOJI": "Gravestone Doji",
+    "CDLHAMMER": "Hammer",
+    "CDLHANGINGMAN": "Hanging Man",
+    "CDLHARAMI": "Harami Pattern",
+    "CDLHARAMICROSS": "Harami Cross Pattern",
+    "CDLHIGHWAVE": "High-Wave Candle",
+    "CDLHIKKAKE": "Hikkake Pattern",
+    "CDLHIKKAKEMOD": "Modified Hikkake Pattern",
+    "CDLHOMINGPIGEON": "Homing Pigeon",
+    "CDLIDENTICAL3CROWS": "Identical Three Crows",
+    "CDLINNECK": "In-Neck Pattern",
+    "CDLINVERTEDHAMMER": "Inverted Hammer",
+    "CDLKICKING": "Kicking",
+    "CDLKICKINGBYLENGTH": "Kicking - bull/bear by longer marubozu",
+    "CDLLADDERBOTTOM": "Ladder Bottom",
+    "CDLLONGLEGGEDDOJI": "Long Legged Doji",
+    "CDLLONGLINE": "Long Line Candle",
+    "CDLMARUBOZU": "Marubozu",
+    "CDLMATCHINGLOW": "Matching Low",
+    "CDLMATHOLD": "Mat Hold",
+    "CDLMORNINGDOJISTAR": "Morning Doji Star",
+    "CDLMORNINGSTAR": "Morning Star",
+    "CDLONNECK": "On-Neck Pattern",
+    "CDLPIERCING": "Piercing Pattern",
+    "CDLRICKSHAWMAN": "Rickshaw Man",
+    "CDLRISEFALL3METHODS": "Rising/Falling Three Methods",
+    "CDLSEPARATINGLINES": "Separating Lines",
+    "CDLSHOOTINGSTAR": "Shooting Star",
+    "CDLSHORTLINE": "Short Line Candle",
+    "CDLSPINNINGTOP": "Spinning Top",
+    "CDLSTALLEDPATTERN": "Stalled Pattern",
+    "CDLSTICKSANDWICH": "Stick Sandwich",
+    "CDLTAKURI": "Takuri (Dragonfly Doji with long shadow)",
+    "CDLTASUKIGAP": "Tasuki Gap",
+    "CDLTHRUSTING": "Thrusting Pattern",
+    "CDLTRISTAR": "Tristar Pattern",
+    "CDLUNIQUE3RIVER": "Unique 3 River",
+    "CDLUPSIDEGAP2CROWS": "Upside Gap Two Crows",
+    "CDLXSIDEGAP3METHODS": "Upside/Downside Gap Three Methods",
+
+    # Your Custom Indicators & Price Fields (preserved)
+    "CLOSE": "Close Price",
+    "OPEN": "Open Price",
+    "HIGH": "High Price",
+    "LOW": "Low Price",
+    "VOLUME": "Volume",
     "EFI": "Elder's Force Index",
     "MY_CUSTOM_INDICATOR": "My Custom Indicator Example",
     "MACD_LINE": "MACD Line",
@@ -193,18 +322,18 @@ def get_talib_function_list():
     ])
     return sorted(list(set(talib_funcs + price_fields + custom_indicator_names)))
 
+# In screener/indicator_utils.py, replace the get_talib_params function
+
 def get_talib_params(fn_name):
     """
-    Returns a list of parameter definitions (dicts with 'name', 'type', 'default')
-    for a given TA-Lib function or custom indicator. The dict keys match what
-    the frontend (builder.js) expects (e.g. 'field', 'period', 'fast_period', etc.).
+    Returns a list of parameter definitions for a given function.
+    This version is updated to correctly handle candlestick patterns.
     """
     fn_name_upper = fn_name.upper()
 
-    # --- Custom Indicators ---
+    # --- Custom Indicators (no change) ---
     if fn_name_upper in CUSTOM_INDICATORS:
-        # Some custom indicators accept 'field', others do not.
-        # We match builder.js’s modal parameter naming conventions.
+        # ... (Your existing logic for custom indicators is fine)
         if fn_name_upper in ["MACD_LINE", "MACD_SIGNAL", "MACD_HIST"]:
             return [
                 {'name': 'field', 'type': 'str', 'default': 'close'},
@@ -234,53 +363,45 @@ def get_talib_params(fn_name):
         else:
             return []
 
-    # --- Price Fields (no extra parameters) ---
+
+    # --- Price Fields (no change) ---
     if fn_name_upper in ["OPEN", "HIGH", "LOW", "CLOSE", "VOLUME"]:
         return []
 
-    # --- TA-Lib Native Functions ---
+    # --- START OF FIX ---
+    # Handle candlestick patterns first, as they don't exist on the main module.
+    if fn_name_upper.startswith('CDL'):
+        # Candlestick patterns have no configurable parameters for the UI.
+        return []
+
+    # Handle all other TA-Lib native functions that ARE on the module
     if hasattr(talib, fn_name_upper):
         fn = getattr(talib, fn_name_upper)
         sig = inspect.signature(fn)
         params = []
         for name, param in sig.parameters.items():
-            # Determine type by inspecting default
             default_val = None if param.default is inspect.Parameter.empty else param.default
             if name in ['real', 'open', 'high', 'low', 'close', 'volume']:
                 param_type = 'series'
             else:
-                if param.default is inspect.Parameter.empty:
-                    param_type = 'required'
+                if param.default is inspect.Parameter.empty: param_type = 'required'
                 else:
-                    if isinstance(param.default, int):
-                        param_type = 'int'
-                    elif isinstance(param.default, float):
-                        param_type = 'float'
-                    else:
-                        param_type = 'any'
-            # Map TA-Lib param names to frontend-friendly names
+                    if isinstance(param.default, int): param_type = 'int'
+                    elif isinstance(param.default, float): param_type = 'float'
+                    else: param_type = 'any'
+            
             frontend_name = name
-            if name == "timeperiod":
-                frontend_name = "period"
-            elif name == "real":
-                frontend_name = "field"
-            elif name == "fastperiod":
-                frontend_name = "fast_period"
-            elif name == "slowperiod":
-                frontend_name = "slow_period"
-            elif name == "signalperiod":
-                frontend_name = "signal_period"
-            elif name == "nbdevup":
-                frontend_name = "nbdev"
-            elif name == "nbdevdn":
-                continue  # Skip, since 'nbdev' covers both up/down
-            # Skip any 'matype' or other complex parameters not handled
-            if "matype" in name.lower():
-                continue
+            if name == "timeperiod": frontend_name = "period"
+            elif name == "real": frontend_name = "field"
+            elif name == "fastperiod": frontend_name = "fast_period"
+            elif name == "slowperiod": frontend_name = "slow_period"
+            elif name == "signalperiod": frontend_name = "signal_period"
+            elif name == "nbdevup": frontend_name = "nbdev"
+            elif name == "nbdevdn": continue
+            if "matype" in name.lower(): continue
 
             params.append({'name': frontend_name, 'type': param_type, 'default': default_val})
 
-        # Deduplicate params if front-end mapping caused duplicates
         unique_params = []
         seen = set()
         for p in params:
@@ -288,19 +409,21 @@ def get_talib_params(fn_name):
                 unique_params.append(p)
                 seen.add(p['name'])
         return unique_params
+    # --- END OF FIX ---
 
     # If no match, return empty
     return []
 
+# In screener/indicator_utils.py, replace the get_talib_grouped_indicators function
+
 def get_talib_grouped_indicators():
     """
-    Groups TA-Lib functions (and custom/derived indicators) into categories
-    that the frontend’s modal can render as dropdowns. We leverage talib’s
-    __function_groups__ if available, otherwise fall back to a generic list.
+    Groups TA-Lib functions (and custom/derived indicators) into categories.
+    This robust version trusts talib.get_function_groups() as the single source of truth.
     """
     result = {}
 
-    # “Price & Volume” group
+    # "Price & Volume" group
     result["Price & Volume"] = [
         {"value": "OPEN", "label": TA_INDICATOR_LABELS.get("OPEN", "Open Price"), "params": []},
         {"value": "HIGH", "label": TA_INDICATOR_LABELS.get("HIGH", "High Price"), "params": []},
@@ -309,7 +432,7 @@ def get_talib_grouped_indicators():
         {"value": "VOLUME", "label": TA_INDICATOR_LABELS.get("VOLUME", "Volume"), "params": []},
     ]
 
-    # “Custom & Derived Indicators” group
+    # "Custom & Derived Indicators" group
     custom_group = []
     for name in sorted(CUSTOM_INDICATORS.keys()):
         custom_group.append({
@@ -320,38 +443,32 @@ def get_talib_grouped_indicators():
     if custom_group:
         result["Custom & Derived Indicators"] = custom_group
 
-    # Other TA-Lib groups if talib provides them; otherwise, fallback
-    fn_groups = getattr(talib, "__function_groups__", {})
-    superseded_bases = {"MACD", "BBANDS", "STOCH"}  # We have custom replacements
+    # --- START OF FIX ---
+    # Use the official TA-Lib function to get all grouped indicators
+    fn_groups = talib.get_function_groups()
+    superseded_bases = {"MACD", "BBANDS", "STOCH"}
+
     for group_name, fn_list in fn_groups.items():
         indicators = []
         for fname in fn_list:
             fname_upper = fname.upper()
             if fname_upper in superseded_bases:
                 continue
-            if not hasattr(talib, fname_upper):
-                continue
+
+            # We now trust the list from get_function_groups() completely and
+            # call our newly robust get_talib_params function.
+            params_list = get_talib_params(fname_upper)
+            
             indicators.append({
                 "value": fname_upper,
                 "label": TA_INDICATOR_LABELS.get(fname_upper, fname_upper),
-                "params": [p['name'] for p in get_talib_params(fname_upper)]
+                "params": [p['name'] for p in params_list]
             })
+
         if indicators:
             result[group_name] = sorted(indicators, key=lambda x: x['label'])
-
-    # Fallback if grouping was empty (besides Price & Volume and Custom & Derived)
-    if len(result) <= 2:
-        all_talib_funcs = [
-            fn for fn in dir(talib)
-            if fn.isupper() and callable(getattr(talib, fn)) and fn not in superseded_bases
-        ]
-        indicators = [{
-            "value": fn,
-            "label": TA_INDICATOR_LABELS.get(fn, fn),
-            "params": [p['name'] for p in get_talib_params(fn)]
-        } for fn in sorted(all_talib_funcs)]
-        result["All TA-Lib Indicators (Fallback)"] = indicators
-
+    # --- END OF FIX ---
+    
     return result
 
 # --------- Data Utilities ---------

@@ -141,8 +141,11 @@ def eval_ast_node(symbol, ast_node, context):
             if op == "!=": return left_val != right_val
             # CROSSES operators need special handling for series
             if op.upper() == "CROSSES ABOVE":
+                # Ensure we are comparing series, not scalars
+                if not all(isinstance(v, (pd.Series, np.ndarray)) for v in [left_val, right_val]): return False
                 return (left_val.shift(1) < right_val.shift(1)) & (left_val > right_val)
             if op.upper() == "CROSSES BELOW":
+                if not all(isinstance(v, (pd.Series, np.ndarray)) for v in [left_val, right_val]): return False
                 return (left_val.shift(1) > right_val.shift(1)) & (left_val < right_val)
             raise ValueError(f"Unknown comparison operator: {op}")
         except Exception:
@@ -153,21 +156,44 @@ def eval_ast_node(symbol, ast_node, context):
         op = ast_node["operator"].upper()
         left_val = eval_ast_node(symbol, ast_node["left"], context)
         
+        # Short-circuit evaluation
+        if op == "OR" and left_val:
+            return True
+        if op == "AND" and not left_val:
+            return False
+            
+        right_val = eval_ast_node(symbol, ast_node["right"], context)
+        
         if op == "OR":
-            return left_val or eval_ast_node(symbol, ast_node["right"], context)
+            return left_val or right_val
         elif op == "AND":
-            return left_val and eval_ast_node(symbol, ast_node["right"], context)
+            return left_val and right_val
         return False
 
-    # --- IndicatorCall: e.g. "15min RSI(CLOSE,14)"
+    # --- IndicatorCall: e.g. "Daily RSI(CLOSE(),14)" ---
     if node_type == "INDICATORCALL":
         ind_name = str(ast_node["name"])
         indicator_part = ast_node.get("part")
         tf = str(ast_node.get("timeframe", "daily")).lower()
-
-        raw_args_list = ast_node.get("arguments", [])
-        evaluated_args_values = [eval_ast_node(symbol, arg, context) for arg in raw_args_list]
         
+        # --- START OF FIX: Smarter Argument Evaluation ---
+        raw_args_list = ast_node.get("arguments", [])
+        evaluated_args_values = []
+        
+        for arg_node in raw_args_list:
+            # If the argument is a simple field call like CLOSE(), pass its name as a string.
+            # Heuristic: An IndicatorCall with no arguments is treated as a potential field name.
+            if arg_node.get("type", "").upper() == "INDICATORCALL" and not arg_node.get("arguments"):
+                field_name = arg_node.get("name", "").lower()
+                # Check if this name corresponds to a basic price field
+                if field_name.upper() in ["OPEN", "HIGH", "LOW", "CLOSE", "VOLUME"]:
+                     evaluated_args_values.append(field_name)
+                     continue # Move to the next argument
+            
+            # For all other cases (numbers, complex nested indicators), evaluate them fully.
+            evaluated_args_values.append(eval_ast_node(symbol, arg_node, context))
+        # --- END OF FIX ---
+
         kwargs_for_call = {}
         param_schema = get_talib_params(ind_name)
         current_eval_arg_idx = 0
@@ -180,9 +206,11 @@ def eval_ast_node(symbol, ast_node, context):
             elif 'default' in schema_item and schema_item['default'] is not None:
                 kwargs_for_call[param_name] = schema_item['default']
         
+        # Default to 'close' if a 'field' is needed but not provided.
         if any(p['name'] == 'field' for p in param_schema) and 'field' not in kwargs_for_call and not ind_name.upper().startswith("STOCH_"):
             kwargs_for_call['field'] = 'close'
 
+        # Load dataframe from context cache or from file
         df_key = f"{symbol}_{tf}"
         if df_key not in context:
             df = load_ohlcv(symbol, tf)
@@ -193,12 +221,15 @@ def eval_ast_node(symbol, ast_node, context):
         
         return call_indicator_logic(df, ind_name, indicator_part=indicator_part, **kwargs_for_call)
 
+    # --- Literals ---
     if node_type == "FIELDLITERAL":
-        return ast_node["value"] # Already a string like 'close'
+        # This case is now less likely but kept for safety.
+        return ast_node["value"]
 
     if node_type == "NUMBERLITERAL":
         return ast_node["value"]
 
+    # --- Fallback ---
     print(f"[eval_ast_node] Unknown AST node type: {node_type}")
     return False
 

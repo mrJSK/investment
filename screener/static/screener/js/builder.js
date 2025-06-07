@@ -543,16 +543,28 @@ function handleQueryInputKeyup(event, suggestionBox) {
   }
 }
 
+// In screener/js/builder.js, replace the entire function
+
 function populateSuggestionBox(suggestions, textarea, suggestionBox) {
   if (!suggestions || suggestions.length === 0) {
     if (suggestionBox) suggestionBox.style.display = "none";
     return;
   }
   suggestionBox.innerHTML = "";
-  suggestions.slice(0, 7).forEach((indicatorDef) => {
+
+  // FIX 1: Increased slice limit from 7 to 20 to show more results.
+  suggestions.slice(0, 20).forEach((indicatorDef) => {
     const li = document.createElement("li");
-    li.className = "px-3 py-2 cursor-pointer hover:bg-gray-600";
-    li.textContent = `${indicatorDef.label} (${indicatorDef.value})`;
+    li.className =
+      "px-3 py-2 cursor-pointer hover:bg-gray-600 border-b border-gray-600/50 last:border-b-0";
+
+    // FIX 2: Using innerHTML for a richer, more descriptive format.
+    // This will show the friendly name in a larger font and the technical name below it.
+    li.innerHTML = `
+      <div class="font-semibold text-white text-sm">${indicatorDef.label}</div>
+      <div class="text-xs text-gray-400 font-mono">${indicatorDef.value}</div>
+    `;
+
     li.onmousedown = (e) => {
       e.preventDefault();
       selectIndicatorFromSuggestion(indicatorDef);
@@ -590,29 +602,36 @@ function openIndicatorConfigModal() {
   ).textContent = `Configure: ${activeIndicatorForConfig.label}`;
   const definedParams = activeIndicatorForConfig.paramsFromDef || [];
 
+  // --- START of new logic ---
+  const indicatorName = activeIndicatorForConfig.name.toUpperCase();
+  const isCandlestickPattern = indicatorName.startsWith("CDL");
+  const isOhlcvField = DEFAULT_FIELDS.includes(indicatorName);
+  // --- END of new logic ---
+
   // Hide all parameter groups initially
   modal
     .querySelectorAll(".param-group")
     .forEach((el) => (el.style.display = "none"));
 
-  // **CORRECTION**: Always show timeframe and field groups
+  // Always show timeframe group
   const timeframeGroup = document.getElementById(
     "indicatorConfigTimeframeGroup"
   );
   if (timeframeGroup) timeframeGroup.style.display = "block";
 
   const fieldGroup = document.getElementById("indicatorConfigFieldGroup");
-  // Only show the field group if the indicator is not itself a field (like 'CLOSE', 'OPEN', etc.)
-  if (
-    fieldGroup &&
-    !DEFAULT_FIELDS.includes(activeIndicatorForConfig.name.toUpperCase())
-  ) {
-    fieldGroup.style.display = "block";
+  // **MODIFIED**: Only show the field group if it's NOT a candlestick pattern
+  // and the indicator is not itself a field (like 'CLOSE').
+  if (fieldGroup) {
+    if (isCandlestickPattern || isOhlcvField) {
+      fieldGroup.style.display = "none";
+    } else {
+      fieldGroup.style.display = "block";
+    }
   }
 
   // Show other groups only if they are defined for the selected indicator
   const paramGroupMap = {
-    // "field" is now handled above
     period: "indicatorConfigPeriodGroup",
     fast_period: "indicatorConfigFastPeriodGroup",
     slow_period: "indicatorConfigSlowPeriodGroup",
@@ -638,25 +657,33 @@ function handleIndicatorConfigDone() {
   const definedParams = activeIndicatorForConfig.paramsFromDef || [];
   const args = [];
 
-  // **CORRECTION**: The logic here must match the modal's display logic.
-  // Always get the field value if the indicator is not a base OHLCV field itself.
-  if (!DEFAULT_FIELDS.includes(indicatorName.toUpperCase())) {
-    const fieldValue = document.getElementById("indicatorConfigField").value;
-    // Ensure a field value is selected and push it as the first argument.
-    if (fieldValue) {
-      args.push(`${fieldValue.toUpperCase()}()`);
-    }
-  }
+  // --- START of new logic ---
+  // Check if the indicator is a candlestick pattern.
+  // We'll assume they all start with 'CDL' for simplicity.
+  const isCandlestickPattern = indicatorName.toUpperCase().startsWith("CDL");
 
-  // Collect OTHER parameter values from visible inputs in the modal based on original definitions.
-  if (definedParams.includes("period"))
-    args.push(document.getElementById("indicatorConfigPeriod").value);
-  if (definedParams.includes("fast_period"))
-    args.push(document.getElementById("indicatorConfigFastPeriod").value);
-  if (definedParams.includes("slow_period"))
-    args.push(document.getElementById("indicatorConfigSlowPeriod").value);
-  if (definedParams.includes("signal_period"))
-    args.push(document.getElementById("indicatorConfigSignalPeriod").value);
+  // Only add arguments if it's NOT a candlestick pattern.
+  if (!isCandlestickPattern) {
+    // This is the original logic for non-candlestick indicators
+    if (!DEFAULT_FIELDS.includes(indicatorName.toUpperCase())) {
+      const fieldValue = document.getElementById("indicatorConfigField").value;
+      if (fieldValue) {
+        args.push(`${fieldValue.toUpperCase()}()`);
+      }
+    }
+
+    // Collect OTHER parameter values from visible inputs in the modal based on original definitions.
+    if (definedParams.includes("period"))
+      args.push(document.getElementById("indicatorConfigPeriod").value);
+    if (definedParams.includes("fast_period"))
+      args.push(document.getElementById("indicatorConfigFastPeriod").value);
+    if (definedParams.includes("slow_period"))
+      args.push(document.getElementById("indicatorConfigSlowPeriod").value);
+    if (definedParams.includes("signal_period"))
+      args.push(document.getElementById("indicatorConfigSignalPeriod").value);
+  }
+  // For candlestick patterns, 'args' will remain empty, which is correct.
+  // --- END of new logic ---
 
   const indicatorString = `${tfDisplay} ${indicatorName}(${args.join(", ")})`;
 
