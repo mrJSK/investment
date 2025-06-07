@@ -68,7 +68,9 @@ let currentWordForAutocomplete = "";
 let wordStartIndex = 0;
 let parsedQueryForSave = null;
 let segmentValueForSave = "";
+// Changed equityChartInstance to store the LightweightCharts chart object
 let equityChartInstance = null;
+let equitySeries = null; // To store the line series for updating data
 
 // ---------------------------
 // Initialization on DOMContentLoaded
@@ -997,7 +999,7 @@ function renderBacktestResults({
 }) {
   const summaryDiv = document.getElementById("backtestSummaryStats");
   const tradesBody = document.getElementById("backtestTradesTableBody");
-  const chartCanvas = document.getElementById("equityCanvas");
+  const chartContainer = document.getElementById("equityChartContainer");
 
   if (summaryDiv) {
     summaryDiv.innerHTML = `<div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm"><span class="text-gray-400">Total Return:</span><span class="text-right font-semibold ${
@@ -1014,8 +1016,9 @@ function renderBacktestResults({
       summary.max_drawdown_pct?.toFixed(2) ?? "N/A"
     }%</span></div>`;
   }
+
   if (tradesBody) {
-    tradesBody.innerHTML = "";
+    tradesBody.innerHTML = ""; // Clear previous trades
     if (trades.length > 0) {
       trades.forEach((t, i) => {
         const pnlClass = t.pnl_pct >= 0 ? "text-green-400" : "text-red-400";
@@ -1033,45 +1036,122 @@ function renderBacktestResults({
       tradesBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">No trades were executed.</td></tr>`;
     }
   }
-  if (chartCanvas) {
-    const ctx = chartCanvas.getContext("2d");
-    if (equityChartInstance) equityChartInstance.destroy();
+
+  // Lightweight Charts Integration
+  if (chartContainer) {
+    // Clear previous chart if it exists
+    if (equityChartInstance) {
+      equityChartInstance.remove();
+      equityChartInstance = null;
+      equitySeries = null;
+    }
+
     if (equity_curve.length > 1) {
-      const gradient = ctx.createLinearGradient(
-        0,
-        0,
-        0,
-        chartCanvas.clientHeight
+      // **DEBUGGING STEP**: Add this console log to check if LightweightCharts is available
+      console.log(
+        "LightweightCharts object:",
+        typeof LightweightCharts,
+        LightweightCharts
       );
-      gradient.addColorStop(0, "rgba(139,92,246,0.4)");
-      gradient.addColorStop(1, "rgba(17,24,39,0.1)");
-      equityChartInstance = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: equity_curve.map((p) => p.datetime),
-          datasets: [
-            {
-              label: "Equity",
-              data: equity_curve.map((p) => p.equity),
-              borderColor: "rgb(139,92,246)",
-              backgroundColor: gradient,
-              borderWidth: 2,
-              pointRadius: 0,
-              tension: 0.1,
-              fill: true,
-            },
-          ],
+
+      // Check if LightweightCharts is defined before using it
+      if (
+        typeof LightweightCharts === "undefined" ||
+        !LightweightCharts.createChart
+      ) {
+        console.error(
+          "Lightweight Charts library is not loaded or not properly initialized. " +
+            "Please ensure 'lightweight-charts.standalone.production.js' is loaded before 'builder.js'."
+        );
+        chartContainer.innerHTML =
+          '<div class="p-4 text-center text-red-400">Error: Chart library not loaded. See console for details.</div>';
+        return; // Exit function if the library isn't available
+      }
+
+      // Initialize the chart with custom options for dark theme and responsiveness
+      equityChartInstance = LightweightCharts.createChart(chartContainer, {
+        width: chartContainer.clientWidth,
+        height: chartContainer.clientHeight,
+        layout: {
+          background: {
+            type: LightweightCharts.ColorType.Solid,
+            color: "#1f2937",
+          }, // Darker background for the chart area
+          textColor: "#d1d5db", // Light text for dark background
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { ticks: { color: "#9ca3af" } },
-            y: { ticks: { color: "#9ca3af" } },
-          },
+        grid: {
+          // Grid line styling
+          vertLines: { color: "#374151" },
+          horzLines: { color: "#374151" },
+        },
+        timeScale: {
+          // Time scale options
+          timeVisible: true,
+          secondsVisible: false,
+          borderColor: "#5f6368", // Match border color with other UI elements
+        },
+        crosshair: {
+          // Crosshair mode
+          mode: LightweightCharts.CrosshairMode.Normal,
+        },
+        watermark: {
+          // Watermark for the chart
+          visible: true,
+          fontSize: 24,
+          horzAlign: "center",
+          vertAlign: "center",
+          color: "rgba(200, 200, 200, 0.2)",
+          text: "Equity Curve",
         },
       });
+
+      // CORRECTED LINE: Use addSeries with LightweightCharts.AreaSeries (or .LineSeries)
+      // This is based on the v5 migration guide.
+      equitySeries = equityChartInstance.addSeries(
+        LightweightCharts.AreaSeries,
+        {
+          // CHANGED HERE
+          lineColor: "#8b5cf6", // Violet-400 from Tailwind (line color)
+          lineWidth: 2, // Line thickness
+          priceFormat: {
+            // Price format for the Y-axis
+            type: "price",
+            precision: 2,
+            minMove: 0.01,
+          },
+          // Area series specific options for a filled effect
+          topColor: "rgba(139,92,246,0.4)", // Gradient start (semi-transparent violet)
+          bottomColor: "rgba(17,24,39,0.1)", // Gradient end (very transparent dark gray)
+        }
+      );
+
+      // Prepare data for Lightweight Charts
+      // The 'time' property must be a timestamp or a string in 'YYYY-MM-DD' format.
+      // Your backend should return 'datetime' in 'YYYY-MM-DD' or a Unix timestamp.
+      const chartData = equity_curve.map((point) => ({
+        time: point.datetime,
+        value: point.equity,
+      }));
+
+      equitySeries.setData(chartData);
+
+      // Handle chart resizing when the container changes size
+      const resizeObserver = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        const newRect = entry.contentRect;
+        if (newRect.width > 0 && newRect.height > 0) {
+          equityChartInstance.applyOptions({
+            height: newRect.height,
+            width: newRect.width,
+          });
+          equityChartInstance.timeScale().fitContent(); // Optional: fit content on resize
+        }
+      });
+      resizeObserver.observe(chartContainer);
+    } else {
+      // Display a message if there's not enough data
+      chartContainer.innerHTML =
+        '<div class="p-4 text-center text-gray-500">Not enough data to draw equity curve.</div>';
     }
   }
 }
