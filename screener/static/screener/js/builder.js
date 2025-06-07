@@ -595,15 +595,24 @@ function openIndicatorConfigModal() {
     .querySelectorAll(".param-group")
     .forEach((el) => (el.style.display = "none"));
 
-  // **CORRECTION**: Always show timeframe group because it is now a universal parameter
+  // **CORRECTION**: Always show timeframe and field groups
   const timeframeGroup = document.getElementById(
     "indicatorConfigTimeframeGroup"
   );
   if (timeframeGroup) timeframeGroup.style.display = "block";
 
+  const fieldGroup = document.getElementById("indicatorConfigFieldGroup");
+  // Only show the field group if the indicator is not itself a field (like 'CLOSE', 'OPEN', etc.)
+  if (
+    fieldGroup &&
+    !DEFAULT_FIELDS.includes(activeIndicatorForConfig.name.toUpperCase())
+  ) {
+    fieldGroup.style.display = "block";
+  }
+
   // Show other groups only if they are defined for the selected indicator
   const paramGroupMap = {
-    field: "indicatorConfigFieldGroup",
+    // "field" is now handled above
     period: "indicatorConfigPeriodGroup",
     fast_period: "indicatorConfigFastPeriodGroup",
     slow_period: "indicatorConfigSlowPeriodGroup",
@@ -629,11 +638,17 @@ function handleIndicatorConfigDone() {
   const definedParams = activeIndicatorForConfig.paramsFromDef || [];
   const args = [];
 
-  // Collect parameter values from visible inputs in the modal
-  if (definedParams.includes("field"))
-    args.push(
-      `${document.getElementById("indicatorConfigField").value.toUpperCase()}()`
-    );
+  // **CORRECTION**: The logic here must match the modal's display logic.
+  // Always get the field value if the indicator is not a base OHLCV field itself.
+  if (!DEFAULT_FIELDS.includes(indicatorName.toUpperCase())) {
+    const fieldValue = document.getElementById("indicatorConfigField").value;
+    // Ensure a field value is selected and push it as the first argument.
+    if (fieldValue) {
+      args.push(`${fieldValue.toUpperCase()}()`);
+    }
+  }
+
+  // Collect OTHER parameter values from visible inputs in the modal based on original definitions.
   if (definedParams.includes("period"))
     args.push(document.getElementById("indicatorConfigPeriod").value);
   if (definedParams.includes("fast_period"))
@@ -790,6 +805,7 @@ function transformQueryStringToBackendStructure(queryString) {
   // In builder.js, replace the existing 'nud' function with this one.
 
   const nud = (token) => {
+    // Handle numbers
     if (token.type === "NUMBER") {
       return { type: "NumberLiteral", value: token.value };
     }
@@ -810,7 +826,8 @@ function transformQueryStringToBackendStructure(queryString) {
       indicatorToken = consume("INDICATOR_NAME");
     }
 
-    // This block now handles all indicator-like function calls.
+    // This block now correctly handles all indicator-like function calls,
+    // including CLOSE, OPEN, VOLUME, etc.
     if (indicatorToken.type === "INDICATOR_NAME") {
       const name = indicatorToken.value;
       consume("BRACKET_OPEN");
@@ -826,16 +843,9 @@ function transformQueryStringToBackendStructure(queryString) {
       }
       consume("BRACKET_CLOSE");
 
-      // **Critical Fix**: Check if the name is a field (OPEN, CLOSE, etc.).
-      // If so, create a 'FieldLiteral' node for the AST.
-      if (DEFAULT_FIELDS.includes(name.toUpperCase())) {
-        return {
-          type: "FieldLiteral",
-          value: name.toLowerCase(),
-        };
-      }
-
-      // Otherwise, create a standard 'IndicatorCall' node.
+      // The special check for DEFAULT_FIELDS has been removed.
+      // We now ALWAYS create an 'IndicatorCall' node which correctly
+      // includes the timeframe. The backend is already set up to handle this.
       return { type: "IndicatorCall", name, timeframe, arguments: args };
     }
 
