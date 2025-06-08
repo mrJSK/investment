@@ -22,4 +22,6 @@ urlpatterns = [
     path('', include('login.urls')),
     path('screener/', include('screener.urls')),
     path('ml/', include('ml_dashboard.urls')), 
+    path('dashboard/', include('dashboard.urls')),
+    path('', include('dashboard.urls')), # Makes the dashboard the homepage
 ]

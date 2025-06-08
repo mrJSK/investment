@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "login",
     'screener',
-    'ml_dashboard'
+    'ml_dashboard',
+    'dashboard'
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,298 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - ScanAndTrade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #111827;
+        color: #d1d5db;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #1f2937;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #4b5563;
+        border-radius: 10px;
+        border: 3px solid #1f2937;
+      }
+      .status-dot {
+        height: 8px;
+        width: 8px;
+        border-radius: 50%;
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      .status-dot-green {
+        background-color: #4ade80;
+        box-shadow: 0 0 8px #4ade80;
+      }
+      @keyframes pulse {
+        50% {
+          opacity: 0.5;
+        }
+      }
+      .tab-btn {
+        background-color: transparent;
+        border-bottom: 2px solid transparent;
+        transition: all 0.3s ease;
+      }
+      .tab-btn.active {
+        color: #a78bfa;
+        border-bottom-color: #a78bfa;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+      .news-full-text {
+        overflow: hidden;
+        transition: max-height 0.4s ease-in-out;
+        max-height: 0;
+      }
+      .collapsing {
+        max-height: 0 !important;
+      }
+      .formatted-text {
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-900 text-gray-300">
+    <header class="bg-gray-800/80 backdrop-blur-md shadow-md sticky top-0 z-40">
+      <div
+        class="container mx-auto px-4 sm:px-6 py-3 flex justify-between items-center"
+      >
+        <a href="#" class="text-2xl font-bold text-violet-400"
+          >Scan<span class="text-teal-400">And</span>Trade</a
+        >
+        <nav class="hidden md:flex items-center space-x-4">
+          <a
+            href="#"
+            class="px-3 py-2 rounded-md text-sm font-medium text-violet-400 bg-gray-900"
+            aria-current="page"
+            >Dashboard</a
+          >
+          <a
+            href="/screener/"
+            class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+            >Screener</a
+          >
+          <a
+            href="#"
+            class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+            >Alerts</a
+          >
+          <a
+            href="#"
+            class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+            >My Account</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+      <h1 class="text-2xl font-bold text-gray-200 mb-6">Trading Dashboard</h1>
+
+      <div
+        id="portfolio-summary"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+      >
+        <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
+          <p class="text-sm font-medium text-gray-400">Total Investment</p>
+          <p
+            id="total-investment"
+            class="text-2xl font-semibold text-white mt-2"
+          >
+            ₹0.00
+          </p>
+        </div>
+        <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
+          <p class="text-sm font-medium text-gray-400">Current Value</p>
+          <p id="current-value" class="text-2xl font-semibold text-white mt-2">
+            ₹0.00
+          </p>
+        </div>
+        <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
+          <p class="text-sm font-medium text-gray-400">Today's P/L</p>
+          <div id="todays-pnl" class="text-2xl font-semibold mt-2">
+            <span id="todays-pnl-value">₹0.00</span
+            ><span id="todays-pnl-pct" class="text-sm ml-2">(0.00%)</span>
+          </div>
+        </div>
+        <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
+          <p class="text-sm font-medium text-gray-400">Overall P/L</p>
+          <div id="overall-pnl" class="text-2xl font-semibold mt-2">
+            <span id="pnl-value">₹0.00</span
+            ><span id="pnl-pct" class="text-sm ml-2">(0.00%)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div class="lg:col-span-2 space-y-8">
+          <div
+            id="stocks-in-focus-container"
+            class="bg-gray-800/50 backdrop-blur-sm rounded-xl shadow-lg p-6 hidden"
+          >
+            <h2 class="text-lg font-semibold text-amber-400 mb-4">
+              Stocks in Focus
+            </h2>
+            <div
+              id="stocks-in-focus-feed"
+              class="grid grid-cols-1 md:grid-cols-2 gap-4"
+            ></div>
+          </div>
+
+          <div class="bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex border-b border-gray-700 mb-4">
+              <button
+                data-tab="open-positions"
+                class="tab-btn active px-4 py-2 text-sm font-semibold"
+              >
+                Open Positions
+              </button>
+              <button
+                data-tab="closed-trades"
+                class="tab-btn px-4 py-2 text-sm font-semibold text-gray-400"
+              >
+                Closed Trades
+              </button>
+            </div>
+
+            <div
+              id="open-positions"
+              class="tab-content active space-y-8 max-h-[600px] custom-scrollbar overflow-y-auto pr-2"
+            >
+              <div class="text-center text-gray-500 p-8">
+                Loading live positions...
+              </div>
+            </div>
+
+            <div id="closed-trades" class="tab-content">
+              <div class="overflow-x-auto max-h-[600px] custom-scrollbar">
+                <table class="w-full text-sm text-left text-gray-400">
+                  <thead
+                    class="text-xs text-gray-400 uppercase bg-gray-700/50 sticky top-0"
+                  >
+                    <tr>
+                      <th class="p-3">Symbol</th>
+                      <th class="p-3">Realized P/L</th>
+                      <th class="p-3">Entry Date</th>
+                      <th class="p-3">Exit Date</th>
+                      <th class="p-3">Exit Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody
+                    id="closed-trades-body"
+                    class="divide-y divide-gray-700"
+                  >
+                    <tr>
+                      <td colspan="5" class="text-center p-8 text-gray-500">
+                        Loading closed trades...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-lg font-semibold text-teal-400 mb-4">
+              Live Market News & Sentiment
+            </h2>
+            <div
+              id="live-news-feed"
+              class="space-y-5 max-h-[600px] custom-scrollbar overflow-y-auto pr-2"
+            >
+              <div class="text-center text-gray-500 p-8">
+                Connecting to news feed...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-1 sticky top-28">
+          <div class="bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-lg font-semibold text-teal-400 mb-4">
+              Active Strategies
+            </h2>
+            <ul class="space-y-4">
+              <li
+                class="flex items-center justify-between p-3 bg-gray-900/50 rounded-md"
+              >
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="status-dot status-dot-green"></span>
+                    <p class="font-semibold text-white">Golden Crossover</p>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-1">
+                    Last Signal: INFY (2h ago)
+                  </p>
+                </div>
+                <button
+                  class="text-xs text-violet-400 hover:text-violet-300 font-semibold"
+                >
+                  VIEW
+                </button>
+              </li>
+              <li
+                class="flex items-center justify-between p-3 bg-gray-900/50 rounded-md"
+              >
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="status-dot status-dot-green"></span>
+                    <p class="font-semibold text-white">RSI Bounce</p>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-1">
+                    Last Signal: WIPRO (Yesterday)
+                  </p>
+                </div>
+                <button
+                  class="text-xs text-violet-400 hover:text-violet-300 font-semibold"
+                >
+                  VIEW
+                </button>
+              </li>
+              <li
+                class="flex items-center justify-between p-3 bg-gray-900/50 rounded-md"
+              >
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="status-dot status-dot-green"></span>
+                    <p class="font-semibold text-white">Straddle King</p>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-1">Scanning Options...</p>
+                </div>
+                <button
+                  class="text-xs text-violet-400 hover:text-violet-300 font-semibold"
+                >
+                  VIEW
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script src="{% static 'dashboard/js/dashboard.js' %}"></script>
+  </body>
+</html>
