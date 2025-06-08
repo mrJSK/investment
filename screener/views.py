@@ -483,6 +483,7 @@ def run_backtest_api(request):
         take_profit_pct = float(body.get("take_profit_pct", 5.0))
         position_size_pct = float(body.get("position_size_pct", 10.0))
         
+        # Note: You can adjust which symbols are scanned here
         symbols_to_scan = list_symbols("daily")[:50] 
 
         results = run_backtest(
@@ -495,6 +496,11 @@ def run_backtest_api(request):
             take_profit_pct=take_profit_pct,
             position_size_pct=position_size_pct
         )
+
+        # DEBUGGING: This line prints the exact summary being sent to the frontend.
+        # Check your Django console to ensure keys like "avg_win_pnl" are present.
+        print("DEBUG: Sending backtest summary:", json.dumps(results.get('summary'), indent=2))
+
         return JsonResponse(results)
 
     except Exception as e:

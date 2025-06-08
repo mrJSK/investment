@@ -938,6 +938,8 @@ function transformBackendStructureToQueryString(astNode) {
 // =================================================================
 // SECTION: Backtesting UI Handlers (Dummy)
 // =================================================================
+// In builder.js
+
 function handleRunBacktest() {
   const overlay = document.getElementById("backtestOverlay");
   const rawQuery = document.getElementById("queryInput").value.trim();
@@ -1001,24 +1003,55 @@ function renderBacktestResults({
   const tradesBody = document.getElementById("backtestTradesTableBody");
   const chartContainer = document.getElementById("equityChartContainer");
 
+  // This part is now working correctly, but we'll keep it for completeness.
   if (summaryDiv) {
-    summaryDiv.innerHTML = `<div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm"><span class="text-gray-400">Total Return:</span><span class="text-right font-semibold ${
-      summary.total_return_pct >= 0 ? "text-green-400" : "text-red-400"
-    }">${
+    const totalReturnClass =
+      summary.total_return_pct >= 0 ? "text-green-400" : "text-red-400";
+    summaryDiv.innerHTML = `
+      <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <span class="text-gray-400">Total Return:</span>
+        <span class="text-right font-semibold ${totalReturnClass}">${
       summary.total_return_pct?.toFixed(2) ?? "N/A"
-    }%</span><span class="text-gray-400">Total Trades:</span><span class="text-right font-semibold">${
-      summary.total_trades ?? "N/A"
-    }</span><span class="text-gray-400">Win Rate:</span><span class="text-right font-semibold">${
-      summary.win_rate?.toFixed(2) ?? "N/A"
-    }%</span><span class="text-gray-400">Profit Factor:</span><span class="text-right font-semibold">${
-      summary.profit_factor?.toFixed(2) ?? "N/A"
-    }</span><span class="text-gray-400">Max Drawdown:</span><span class="text-right font-semibold">${
-      summary.max_drawdown_pct?.toFixed(2) ?? "N/A"
-    }%</span></div>`;
+    }%</span>
+        <span class="text-gray-400">Total Trades:</span>
+        <span class="text-right font-semibold">${
+          summary.total_trades ?? "N/A"
+        }</span>
+        <span class="text-gray-400">Win Rate:</span>
+        <span class="text-right font-semibold">${
+          summary.win_rate?.toFixed(2) ?? "N/A"
+        }%</span>
+        <span class="text-gray-400">Profit Factor:</span>
+        <span class="text-right font-semibold">${
+          summary.profit_factor?.toFixed(2) ?? "N/A"
+        }</span>
+        <span class="text-gray-400">Max Drawdown:</span>
+        <span class="text-right font-semibold">${
+          summary.max_drawdown_pct?.toFixed(2) ?? "N/A"
+        }%</span>
+        <span class="text-gray-400">Avg Win PnL:</span>
+        <span class="text-right font-semibold text-green-400">${
+          summary.avg_win_pnl?.toFixed(2) ?? "N/A"
+        }</span>
+        <span class="text-gray-400">Avg Loss PnL:</span>
+        <span class="text-right font-semibold text-red-400">${
+          summary.avg_loss_pnl?.toFixed(2) ?? "N/A"
+        }</span>
+        <span class="text-gray-400">Longest Win Streak:</span>
+        <span class="text-right font-semibold">${
+          summary.longest_win_streak ?? "N/A"
+        }</span>
+        <span class="text-gray-400">Longest Loss Streak:</span>
+        <span class="text-right font-semibold">${
+          summary.longest_loss_streak ?? "N/A"
+        }</span>
+      </div>
+    `;
   }
 
+  // This part for the trades list is also working fine.
   if (tradesBody) {
-    tradesBody.innerHTML = ""; // Clear previous trades
+    tradesBody.innerHTML = "";
     if (trades.length > 0) {
       trades.forEach((t, i) => {
         const pnlClass = t.pnl_pct >= 0 ? "text-green-400" : "text-red-400";
@@ -1029,7 +1062,7 @@ function renderBacktestResults({
         }</td><td class="p-2">${t.entry_date}</td><td class="p-2">${
           t.exit_date
         }</td><td class="p-2 ${pnlClass}">${t.pnl_pct.toFixed(
-          2
+          4
         )}%</td><td class="p-2">${t.reason}</td>`;
       });
     } else {
@@ -1037,65 +1070,42 @@ function renderBacktestResults({
     }
   }
 
-  // Lightweight Charts Integration
+  // --- EQUITY CHART LOGIC ---
   if (chartContainer) {
-    // Clear previous chart if it exists
     if (equityChartInstance) {
       equityChartInstance.remove();
       equityChartInstance = null;
-      equitySeries = null;
     }
 
     if (equity_curve.length > 1) {
-      // **DEBUGGING STEP**: Add this console log to check if LightweightCharts is available
-      console.log(
-        "LightweightCharts object:",
-        typeof LightweightCharts,
-        LightweightCharts
-      );
-
-      // Check if LightweightCharts is defined before using it
       if (
         typeof LightweightCharts === "undefined" ||
         !LightweightCharts.createChart
       ) {
-        console.error(
-          "Lightweight Charts library is not loaded or not properly initialized. " +
-            "Please ensure 'lightweight-charts.standalone.production.js' is loaded before 'builder.js'."
-        );
+        console.error("Lightweight Charts library is not loaded.");
         chartContainer.innerHTML =
-          '<div class="p-4 text-center text-red-400">Error: Chart library not loaded. See console for details.</div>';
-        return; // Exit function if the library isn't available
+          '<div class="p-4 text-center text-red-400">Error: Chart library not loaded.</div>';
+        return;
       }
 
-      // Initialize the chart with custom options for dark theme and responsiveness
       equityChartInstance = LightweightCharts.createChart(chartContainer, {
         width: chartContainer.clientWidth,
         height: chartContainer.clientHeight,
         layout: {
-          background: {
-            type: LightweightCharts.ColorType.Solid,
-            color: "#1f2937",
-          }, // Darker background for the chart area
-          textColor: "#d1d5db", // Light text for dark background
+          background: { type: "solid", color: "#1f2937" },
+          textColor: "#d1d5db",
         },
         grid: {
-          // Grid line styling
           vertLines: { color: "#374151" },
           horzLines: { color: "#374151" },
         },
         timeScale: {
-          // Time scale options
           timeVisible: true,
           secondsVisible: false,
-          borderColor: "#5f6368", // Match border color with other UI elements
+          borderColor: "#5f6368",
         },
-        crosshair: {
-          // Crosshair mode
-          mode: LightweightCharts.CrosshairMode.Normal,
-        },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
         watermark: {
-          // Watermark for the chart
           visible: true,
           fontSize: 24,
           horzAlign: "center",
@@ -1105,29 +1115,18 @@ function renderBacktestResults({
         },
       });
 
-      // CORRECTED LINE: Use addSeries with LightweightCharts.AreaSeries (or .LineSeries)
-      // This is based on the v5 migration guide.
-      equitySeries = equityChartInstance.addSeries(
-        LightweightCharts.AreaSeries,
-        {
-          // CHANGED HERE
-          lineColor: "#8b5cf6", // Violet-400 from Tailwind (line color)
-          lineWidth: 2, // Line thickness
-          priceFormat: {
-            // Price format for the Y-axis
-            type: "price",
-            precision: 2,
-            minMove: 0.01,
-          },
-          // Area series specific options for a filled effect
-          topColor: "rgba(139,92,246,0.4)", // Gradient start (semi-transparent violet)
-          bottomColor: "rgba(17,24,39,0.1)", // Gradient end (very transparent dark gray)
-        }
-      );
+      // =================================================================
+      // THIS IS THE CORRECTED LINE FOR THE CHART API
+      // =================================================================
+      const equitySeries = equityChartInstance.addAreaSeries({
+        lineColor: "#8b5cf6",
+        lineWidth: 2,
+        priceFormat: { type: "price", precision: 2, minMove: 0.01 },
+        topColor: "rgba(139, 92, 246, 0.4)",
+        bottomColor: "rgba(17, 24, 39, 0.1)",
+      });
+      // =================================================================
 
-      // Prepare data for Lightweight Charts
-      // The 'time' property must be a timestamp or a string in 'YYYY-MM-DD' format.
-      // Your backend should return 'datetime' in 'YYYY-MM-DD' or a Unix timestamp.
       const chartData = equity_curve.map((point) => ({
         time: point.datetime,
         value: point.equity,
@@ -1135,21 +1134,18 @@ function renderBacktestResults({
 
       equitySeries.setData(chartData);
 
-      // Handle chart resizing when the container changes size
       const resizeObserver = new ResizeObserver((entries) => {
-        const entry = entries[0];
-        const newRect = entry.contentRect;
-        if (newRect.width > 0 && newRect.height > 0) {
-          equityChartInstance.applyOptions({
-            height: newRect.height,
-            width: newRect.width,
-          });
-          equityChartInstance.timeScale().fitContent(); // Optional: fit content on resize
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          if (width > 0 && height > 0) {
+            equityChartInstance.applyOptions({ width, height });
+          }
         }
+        equityChartInstance.timeScale().fitContent();
       });
+
       resizeObserver.observe(chartContainer);
     } else {
-      // Display a message if there's not enough data
       chartContainer.innerHTML =
         '<div class="p-4 text-center text-gray-500">Not enough data to draw equity curve.</div>';
     }
