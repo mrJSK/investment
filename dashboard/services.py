@@ -189,6 +189,7 @@
 #     return fresh_news
 
 import time
+import feedparser
 import requests
 import json
 import re
@@ -383,3 +384,68 @@ def get_cached_or_fresh_news():
         print("Setting new cache for 60 seconds.")
         cache.set(CACHE_KEY, fresh_news, 60)
     return fresh_news
+
+# --- CORRECTED: NSE Announcements Service ---
+def fetch_and_parse_nse_announcements():
+    """
+    Fetches the NSE RSS feed, parses it, and categorizes announcements exhaustively.
+    """
+    # CORRECTED URL to prevent 404 errors
+    rss_url = "https://nsearchives.nseindia.com/content/RSS/Online_announcements.xml"
+    print(f"Fetching NSE announcements from: {rss_url}")
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    
+    try:
+        response = requests.get(rss_url, headers=headers, timeout=20)
+        response.raise_for_status()
+        # Using feedparser which is robust for RSS feeds
+        feed = feedparser.parse(response.content)
+    except requests.exceptions.RequestException as e:
+        print(f"❌ ERROR: Could not fetch NSE announcements RSS feed. {e}")
+        return {}
+
+    categorized_announcements = {}
+    processed_links = set()
+
+    for entry in feed.entries:
+        if entry.link in processed_links:
+            continue
+        
+        description = entry.description if hasattr(entry, 'description') else ""
+        
+        # Extract subject/category exhaustively from the description
+        subject = "Updates" # Default category
+        if "|SUBJECT:" in description:
+            subject_text = description.split("|SUBJECT:")[1].strip()
+            # Clean up common variations like '-XBRL'
+            subject = re.sub(r'(-XBRL|XBRL)$', '', subject_text, flags=re.I).strip()
+
+        if subject not in categorized_announcements:
+            categorized_announcements[subject] = []
+        
+        categorized_announcements[subject].append({
+            "company": entry.title,
+            "description": description.split("|SUBJECT:")[0].strip(),
+            "link": entry.link,
+            "pub_date": entry.get("published", "N/A")
+        })
+        processed_links.add(entry.link)
+
+    print(f"✅ Processed {len(feed.entries)} announcements into {len(categorized_announcements)} categories.")
+    return categorized_announcements
+
+def get_cached_or_fresh_announcements():
+    """Implements a 5-minute caching logic for NSE announcements."""
+    CACHE_KEY = 'nse_announcements_data'
+    cached_data = cache.get(CACHE_KEY)
+    if cached_data:
+        print("Returning cached NSE announcements.")
+        return cached_data
+    
+    print("Cache for NSE announcements expired. Fetching fresh data...")
+    fresh_data = fetch_and_parse_nse_announcements()
+    if fresh_data:
+        # Cache duration is 300 seconds (5 minutes)
+        cache.set(CACHE_KEY, fresh_data, 300) 
+        print("Set new cache for NSE announcements for 5 minutes.")
+    return fresh_data

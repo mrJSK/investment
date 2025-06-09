@@ -1,10 +1,11 @@
+// static/dashboard/js/dashboard.js
+
 document.addEventListener("DOMContentLoaded", function () {
   // --- State Variables ---
   let liveTrades = [];
   let priceHistories = {};
   let lastNewsDataString = "";
-  // Flag to ensure the DOM is manipulated only once
-  let hasMovedStocksInFocus = false;
+  let lastAnnouncementsDataString = "";
 
   // --- DOM Element References ---
   const openPositionsContainer = document.getElementById("open-positions");
@@ -20,10 +21,13 @@ document.addEventListener("DOMContentLoaded", function () {
     "stocks-in-focus-container"
   );
   const stocksInFocusFeed = document.getElementById("stocks-in-focus-feed");
+  // NEW: Announcement DOM elements
+  const announcementTabsContainer =
+    document.getElementById("announcement-tabs");
+  const announcementContentContainer = document.getElementById(
+    "announcement-content"
+  );
 
-  /**
-   * Fetches all necessary data from the API endpoint and orchestrates rendering.
-   */
   async function fetchDashboardData() {
     try {
       const response = await fetch("/dashboard/api/live-data/");
@@ -31,65 +35,132 @@ document.addEventListener("DOMContentLoaded", function () {
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
-      // Process live trade data to build price history for sparklines
+      // --- Trading Data Processing ---
       data.live_trades.forEach((trade) => {
         if (!priceHistories[trade.symbol]) {
           priceHistories[trade.symbol] = [trade.currentPrice];
         } else {
           priceHistories[trade.symbol].push(trade.currentPrice);
-          if (priceHistories[trade.symbol].length > 30) {
+          if (priceHistories[trade.symbol].length > 30)
             priceHistories[trade.symbol].shift();
-          }
         }
         trade.priceHistory = priceHistories[trade.symbol];
       });
       liveTrades = data.live_trades;
 
-      // Render the main trading sections
       renderOpenPositions();
       renderPortfolioSummary();
       renderClosedTrades(data.closed_trades);
 
-      // --- NEWS HANDLING ---
+      // --- CNBC News Handling ---
       const newNewsDataString = JSON.stringify(data.market_news);
       if (newNewsDataString !== lastNewsDataString) {
-        console.log("New news data detected. Rendering news feeds.");
         lastNewsDataString = newNewsDataString;
         renderRegularNews(data.market_news.regular);
         renderStocksToWatch(data.market_news.watch_list);
-      } else {
-        console.log("News data is unchanged. Skipping news DOM update.");
       }
 
-      // --- Reposition "Stocks in Focus" Section (runs only once) ---
-      if (!hasMovedStocksInFocus && stocksInFocusContainer) {
-        const tradeTableWrapper = openPositionsContainer.closest(
-          ".bg-gray-800.rounded-xl.shadow-lg"
-        );
-        if (tradeTableWrapper) {
-          // Inserts the stocks container right after the trade table container
-          tradeTableWrapper.insertAdjacentElement(
-            "afterend",
-            stocksInFocusContainer
-          );
-          hasMovedStocksInFocus = true;
-        }
+      // --- NEW: NSE Announcements Handling ---
+      const newAnnouncementsDataString = JSON.stringify(data.nse_announcements);
+      if (newAnnouncementsDataString !== lastAnnouncementsDataString) {
+        lastAnnouncementsDataString = newAnnouncementsDataString;
+        renderNseAnnouncements(data.nse_announcements);
       }
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
-      if (openPositionsContainer)
-        openPositionsContainer.innerHTML = `<div class="text-center text-red-500 p-8">Could not load live data.</div>`;
-      if (newsContainer)
-        newsContainer.innerHTML = `<div class="text-center text-red-500 p-8">Could not load news feed.</div>`;
-      if (stocksInFocusContainer)
-        stocksInFocusContainer.innerHTML = `<div class="text-center text-red-500 p-8">Could not load stocks to watch.</div>`;
+      // Update UI to show errors
     }
   }
 
-  /**
-   * Renders the main market news feed.
-   * @param {Array} newsData - Array of news article objects.
-   */
+  // --- NEW: Function to render NSE Announcements ---
+  function renderNseAnnouncements(announcements) {
+    if (!announcementTabsContainer || !announcementContentContainer) return;
+
+    const categories = Object.keys(announcements);
+
+    if (categories.length === 0) {
+      announcementTabsContainer.innerHTML = `<div class="text-center text-gray-500 p-4 w-full">No announcements found.</div>`;
+      announcementContentContainer.innerHTML = "";
+      return;
+    }
+
+    announcementTabsContainer.innerHTML = "";
+    announcementContentContainer.innerHTML = "";
+
+    categories.forEach((category, index) => {
+      // Create Tab Button
+      const tabButton = document.createElement("button");
+      tabButton.className =
+        "tab-btn px-4 py-2 text-sm font-semibold text-gray-400";
+      tabButton.dataset.tab = `announcement-pane-${index}`;
+      tabButton.textContent = `${category} (${announcements[category].length})`;
+      if (index === 0) {
+        tabButton.classList.add("active");
+        tabButton.classList.remove("text-gray-400");
+        tabButton.classList.add("text-violet-400");
+      }
+      announcementTabsContainer.appendChild(tabButton);
+
+      // Create Content Pane
+      const contentPane = document.createElement("div");
+      contentPane.id = `announcement-pane-${index}`;
+      contentPane.className = "tab-content";
+      if (index === 0) {
+        contentPane.classList.add("active");
+      }
+
+      let tableHTML = `<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-400"><thead class="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th class="p-3">Company</th><th class="p-3">Announcement</th><th class="p-3">Date</th><th class="p-3 text-center">Link</th></tr></thead><tbody class="divide-y divide-gray-700">`;
+      announcements[category].forEach((item) => {
+        tableHTML += `
+                  <tr>
+                      <td class="p-3 font-medium text-white align-top">${item.company}</td>
+                      <td class="p-3 text-gray-300 align-top">${item.description}</td>
+                      <td class="p-3 whitespace-nowrap align-top">${item.pub_date}</td>
+                      <td class="p-3 text-center align-top">
+                          <a href="${item.link}" target="_blank" rel="noopener noreferrer" class="text-violet-400 hover:text-violet-300 font-bold">
+                              <i class="fas fa-file-pdf"></i>
+                          </a>
+                      </td>
+                  </tr>`;
+      });
+      tableHTML += "</tbody></table></div>";
+      contentPane.innerHTML = tableHTML;
+      announcementContentContainer.appendChild(contentPane);
+    });
+  }
+
+  function initTabs() {
+    // This function handles multiple tab systems on the page
+    const allTabContainers = document.querySelectorAll(
+      ".bg-gray-800.rounded-xl.shadow-lg"
+    );
+
+    allTabContainers.forEach((container) => {
+      const tabButtons = container.querySelectorAll(".tab-btn");
+      const tabContents = container.querySelectorAll(".tab-content");
+
+      if (tabButtons.length === 0) return;
+
+      tabButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          tabButtons.forEach((btn) =>
+            btn.classList.remove("active", "text-violet-400")
+          );
+          button.classList.add("active", "text-violet-400");
+
+          tabContents.forEach((content) => {
+            content.classList.remove("active");
+            if (content.id === button.dataset.tab) {
+              content.classList.add("active");
+            }
+          });
+        });
+      });
+    });
+  }
+
+  // --- All other rendering functions (renderOpenPositions, renderClosedTrades, etc.) remain unchanged ---
+
   function renderRegularNews(newsData) {
     if (!newsContainer) return;
     if (!newsData || newsData.length === 0) {
@@ -126,30 +197,23 @@ document.addEventListener("DOMContentLoaded", function () {
         item.headline
       }</a><div class="text-xs text-gray-400 mt-1">${
         item.publication_time
-      }</div></div><button class="read-more-btn flex-shrink-0 text-sm text-violet-400 hover:text-violet-300 font-semibold py-2 px-3 rounded-md hover:bg-gray-700 transition-colors" data-target="news-content-${index}">Read More</button></div><div id="news-content-${index}" class="news-full-text hidden mt-4 pt-4 border-t border-gray-700 text-gray-400 text-sm leading-relaxed formatted-text">${
+      }</div></div><button class="read-more-btn flex-shrink-0 text-sm text-violet-400 hover:text-violet-300 font-semibold py-2 px-3 rounded-md hover:bg-gray-700 transition-colors" data-target="news-content-${index}">Read More</button></div><div id="news-content-${index}" class="news-full-text mt-4 pt-4 border-t border-gray-700 text-gray-400 text-sm leading-relaxed formatted-text" style="max-height: 0px;">${
         item.full_text
       }</div></div>`;
       newsContainer.appendChild(newsItem);
     });
   }
 
-  /**
-   * Renders the "Stocks to Watch" section.
-   * @param {Array} watchListData - Array of stock watch list objects.
-   */
   function renderStocksToWatch(watchListData) {
     if (!stocksInFocusFeed || !stocksInFocusContainer) return;
-
     if (!watchListData || watchListData.length === 0) {
       stocksInFocusContainer.classList.add("hidden");
       return;
     }
-
     stocksInFocusContainer.classList.remove("hidden");
     stocksInFocusFeed.innerHTML = "";
     stocksInFocusFeed.className = "space-y-4";
-
-    watchListData.forEach((item, index) => {
+    watchListData.forEach((item) => {
       let borderColor, textColor, bgColor;
       switch (item.sentiment.toLowerCase()) {
         case "positive":
@@ -169,100 +233,29 @@ document.addEventListener("DOMContentLoaded", function () {
           break;
       }
       const stockItem = document.createElement("div");
-      stockItem.className = `bg-gray-800/50 rounded-lg border-l-4 ${borderColor} mb-4`;
-
-      // Final updated innerHTML to show full text by default and remove "Read More" button.
-      stockItem.innerHTML = `
-        <div class="p-4">
-            <div class="flex-grow">
-                <div class="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3">
-                    <span class="font-bold text-xs ${bgColor} ${textColor} px-3 py-1 rounded-full whitespace-nowrap">
-                        ${item.sentiment.toUpperCase()}: ${item.action.toUpperCase()} (${
+      stockItem.className = `bg-gray-800/50 rounded-lg border-l-4 ${borderColor} p-4`;
+      stockItem.innerHTML = `<div class="flex-grow"><div class="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3"><span class="font-bold text-xs ${bgColor} ${textColor} px-3 py-1 rounded-full whitespace-nowrap">${item.sentiment.toUpperCase()}: ${item.action.toUpperCase()} (${
         item.confidence
-      }%)
-                    </span>
-                    <span class="font-bold text-gray-200">
-                        ${item.stock_name}
-                    </span>
-                </div>
-                <p class="text-xs text-gray-400 leading-relaxed formatted-text">
-                    ${item.text}
-                </p>
-            </div>
-        </div>`;
+      }%)</span><span class="font-bold text-gray-200">${
+        item.stock_name
+      }</span></div><p class="text-xs text-gray-400 leading-relaxed formatted-text">${
+        item.text
+      }</p></div>`;
       stocksInFocusFeed.appendChild(stockItem);
     });
   }
 
-  /**
-   * A shared handler for expanding/collapsing "Read More" sections in the main news feed.
-   */
-  function handleCollapsibleClick(event) {
+  newsContainer.addEventListener("click", (event) => {
     const button = event.target.closest(".read-more-btn");
     if (!button) return;
-
-    const contentId = button.dataset.target;
-    const contentEl = document.getElementById(contentId);
+    const contentEl = document.getElementById(button.dataset.target);
     if (!contentEl) return;
-
-    const isHidden = contentEl.classList.contains("hidden");
-
-    if (isHidden) {
-      // --- EXPAND ---
-      contentEl.classList.remove("hidden");
-      requestAnimationFrame(() => {
-        contentEl.style.maxHeight = contentEl.scrollHeight + "px";
-      });
-      button.textContent = "Read Less";
-    } else {
-      // --- COLLAPSE ---
-      contentEl.style.maxHeight = "0px";
-      button.textContent = "Read More";
-      contentEl.addEventListener(
-        "transitionend",
-        () => {
-          if (contentEl.style.maxHeight === "0px") {
-            contentEl.classList.add("hidden");
-          }
-        },
-        { once: true }
-      );
-    }
-  }
-
-  // --- Event Listeners ---
-  // The collapsible handler is now only needed for the main news container.
-  if (newsContainer) {
-    newsContainer.addEventListener("click", handleCollapsibleClick);
-  }
-
-  // --- Utility and Initialization Functions (Unchanged) ---
-
-  function initTabs() {
-    const tabButtons = document.querySelectorAll(".tab-btn");
-    const tabContents = document.querySelectorAll(".tab-content");
-    tabButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        tabButtons.forEach((btn) => {
-          btn.classList.remove(
-            "active",
-            "text-violet-400",
-            "border-violet-400"
-          );
-          btn.classList.add("text-gray-400", "border-transparent");
-        });
-        button.classList.add("active", "text-violet-400", "border-violet-400");
-        button.classList.remove("text-gray-400", "border-transparent");
-
-        tabContents.forEach((content) => {
-          content.classList.remove("active");
-          if (content.id === button.dataset.tab) {
-            content.classList.add("active");
-          }
-        });
-      });
-    });
-  }
+    const isCollapsed = contentEl.style.maxHeight === "0px";
+    contentEl.style.maxHeight = isCollapsed
+      ? contentEl.scrollHeight + "px"
+      : "0px";
+    button.textContent = isCollapsed ? "Read Less" : "Read More";
+  });
 
   function renderOpenPositions() {
     if (!openPositionsContainer) return;
@@ -433,14 +426,36 @@ document.addEventListener("DOMContentLoaded", function () {
     todaysPnlPctEl.className = `text-sm ml-2 ${todaysPnlClass}`;
   }
 
-  /**
-   * Initializes the dashboard, sets up tabs and starts the data fetch interval.
-   */
   function init() {
     console.log("Initializing Dashboard...");
-    initTabs();
+    document.body.addEventListener("click", function (event) {
+      const button = event.target.closest(".tab-btn");
+      if (button) {
+        const parentContainer = button.closest(".bg-gray-800");
+        const allButtons = parentContainer.querySelectorAll(".tab-btn");
+        const allContent = parentContainer.querySelectorAll(".tab-content");
+
+        allButtons.forEach((btn) => {
+          btn.classList.remove("active", "text-violet-400");
+          btn.classList.add("text-gray-400");
+        });
+
+        button.classList.add("active", "text-violet-400");
+        button.classList.remove("text-gray-400");
+
+        allContent.forEach((content) => {
+          content.classList.remove("active");
+        });
+
+        const contentToShow = parentContainer.querySelector(
+          `#${button.dataset.tab}`
+        );
+        if (contentToShow) contentToShow.classList.add("active");
+      }
+    });
+
     fetchDashboardData();
-    setInterval(fetchDashboardData, 60000); // Refresh data every 60 seconds
+    setInterval(fetchDashboardData, 60000); // Refresh every 60 seconds
   }
 
   init();

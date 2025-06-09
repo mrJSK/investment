@@ -22,6 +22,7 @@
       }
       .custom-scrollbar::-webkit-scrollbar {
         width: 8px;
+        height: 8px;
       }
       .custom-scrollbar::-webkit-scrollbar-track {
         background: #1f2937;
@@ -50,6 +51,7 @@
         background-color: transparent;
         border-bottom: 2px solid transparent;
         transition: all 0.3s ease;
+        white-space: nowrap;
       }
       .tab-btn.active {
         color: #a78bfa;
@@ -65,9 +67,6 @@
         overflow: hidden;
         transition: max-height 0.4s ease-in-out;
         max-height: 0;
-      }
-      .collapsing {
-        max-height: 0 !important;
       }
       .formatted-text {
         white-space: pre-wrap;
@@ -176,7 +175,6 @@
                 Closed Trades
               </button>
             </div>
-
             <div
               id="open-positions"
               class="tab-content active space-y-8 max-h-[600px] custom-scrollbar overflow-y-auto pr-2"
@@ -185,7 +183,6 @@
                 Loading live positions...
               </div>
             </div>
-
             <div id="closed-trades" class="tab-content">
               <div class="overflow-x-auto max-h-[600px] custom-scrollbar">
                 <table class="w-full text-sm text-left text-gray-400">
@@ -226,6 +223,29 @@
               <div class="text-center text-gray-500 p-8">
                 Connecting to news feed...
               </div>
+            </div>
+          </div>
+
+          <div
+            id="nse-announcements-container"
+            class="bg-gray-800 rounded-xl shadow-lg p-6"
+          >
+            <h2 class="text-lg font-semibold text-violet-400 mb-4">
+              NSE Corporate Announcements
+            </h2>
+            <div id="announcement-tabs-container">
+              <div
+                id="announcement-tabs"
+                class="flex border-b border-gray-700 mb-4 overflow-x-auto custom-scrollbar pb-1"
+              >
+                <div class="text-center text-gray-500 p-4 w-full">
+                  Loading announcements...
+                </div>
+              </div>
+              <div
+                id="announcement-content"
+                class="max-h-[600px] custom-scrollbar overflow-y-auto pr-2"
+              ></div>
             </div>
           </div>
         </div>
