@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     "login",
     'screener',
     'ml_dashboard',
-    'dashboard'
+    'dashboard',
+    'fundamentals'
 ]
 
 MIDDLEWARE = [

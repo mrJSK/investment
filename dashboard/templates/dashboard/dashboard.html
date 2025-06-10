@@ -149,15 +149,32 @@
         <div class="lg:col-span-2 space-y-8">
           <div
             id="stocks-in-focus-container"
-            class="bg-gray-800/50 backdrop-blur-sm rounded-xl shadow-lg p-6 hidden"
+            class="bg-gray-800 rounded-xl shadow-lg p-6"
           >
             <h2 class="text-lg font-semibold text-amber-400 mb-4">
               Stocks in Focus
             </h2>
-            <div
-              id="stocks-in-focus-feed"
-              class="grid grid-cols-1 md:grid-cols-2 gap-4"
-            ></div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left text-gray-400">
+                <thead class="text-xs text-gray-400 uppercase bg-gray-700/50">
+                  <tr>
+                    <th class="p-3">Stock</th>
+                    <th class="p-3">Reason / News</th>
+                    <th class="p-3">Sentiment</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="stocks-in-focus-body"
+                  class="divide-y divide-gray-700"
+                >
+                  <tr>
+                    <td colspan="3" class="text-center p-8 text-gray-500">
+                      Loading stocks in focus...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div class="bg-gray-800 rounded-xl shadow-lg p-6">
@@ -175,6 +192,7 @@
                 Closed Trades
               </button>
             </div>
+
             <div
               id="open-positions"
               class="tab-content active space-y-8 max-h-[600px] custom-scrollbar overflow-y-auto pr-2"
@@ -183,6 +201,7 @@
                 Loading live positions...
               </div>
             </div>
+
             <div id="closed-trades" class="tab-content">
               <div class="overflow-x-auto max-h-[600px] custom-scrollbar">
                 <table class="w-full text-sm text-left text-gray-400">
