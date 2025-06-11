@@ -4,10 +4,16 @@ from . import views
 app_name = 'fundamentals'
 
 urlpatterns = [
-    # The path for the main page is now an empty string, relative to '/fundamentals/'
+    # Main fundamentals page
     path('', views.FundamentalsView.as_view(), name='fundamentals_page'),
 
-    # The API paths are now relative to '/fundamentals/'
+    # --- API Paths ---
+    # API for the sidebar's simple company list
     path('api/companies/', views.company_list_api, name='api_company_list'),
+    
+    # API for the market cap tab's categorized data
+    path('api/market-cap-data/', views.market_cap_api, name='api_market_cap_data'),
+
+    # API for individual company details
     path('api/company/<str:symbol>/', views.company_detail_api, name='api_company_detail'),
 ]

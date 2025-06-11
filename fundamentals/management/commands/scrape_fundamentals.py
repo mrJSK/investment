@@ -1,39 +1,308 @@
-# # fundamentals/management/commands/scrape_fundamentals.py
+# # # fundamentals/management/commands/scrape_fundamentals.py
+
+# # import requests
+# # import re
+# # import time
+# # from bs4 import BeautifulSoup
+# # from django.core.management.base import BaseCommand
+# # from fundamentals.models import Company, IndustryClassification
+
+# # # --- UTILITY AND HELPER FUNCTIONS ---
+
+# # def get_soup(url):
+# #     """Fetches a URL and returns a BeautifulSoup object."""
+# #     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+# #     try:
+# #         response = requests.get(url, headers=headers, timeout=25)
+# #         response.raise_for_status()
+# #         return BeautifulSoup(response.content, 'lxml')
+# #     except requests.exceptions.RequestException as e:
+# #         print(f"Error fetching {url}: {e}")
+# #         return None
+
+# # def clean_text(text, field_name=""):
+# #     """Cleans common text patterns from scraped strings."""
+# #     if not text:
+# #         return None
+# #     # Specific cleaning for codes to only remove the prefix
+# #     if field_name in ["bse_code", "nse_code"]:
+# #         return text.strip().replace('BSE:', '').replace('NSE:', '').strip()
+# #     return text.strip().replace('₹', '').replace(',', '').replace('%', '').replace('Cr.', '').strip()
+
+# # def parse_number(text):
+# #     """Parses a string to a float, returning None on failure."""
+# #     cleaned = clean_text(text)
+# #     if cleaned in [None, '']:
+# #         return None
+# #     match = re.search(r'[-+]?\d*\.\d+|\d+', cleaned)
+# #     if match:
+# #         try:
+# #             return float(match.group(0))
+# #         except (ValueError, TypeError):
+# #             return None
+# #     return None
+
+# # def get_calendar_sort_key(header_string):
+# #     """Creates a sortable key (year, month) from a date string like 'Mar 2024'."""
+# #     MONTH_MAP = {
+# #         'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+# #         'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+# #     }
+# #     try:
+# #         month_str, year_str = header_string.strip().split()
+# #         year = int(year_str)
+# #         month = MONTH_MAP.get(month_str, 0)
+# #         return (year, month)
+# #     except (ValueError, KeyError, IndexError):
+# #         try:
+# #             return (int(header_string), 0)
+# #         except (ValueError, TypeError):
+# #              return (0, 0)
+
+# # # --- PARSING FUNCTIONS ---
+
+# # def process_industry_path(soup):
+# #     """Parses the industry classification path and creates/gets DB objects."""
+# #     peers_section = soup.select_one('section#peers')
+# #     if not peers_section: return None
+    
+# #     path_paragraph = peers_section.select_one('p.sub:not(#benchmarks)')
+# #     if not path_paragraph: return None
+    
+# #     path_links = path_paragraph.select('a')
+# #     if not path_links: return None
+        
+# #     path_names = [link.get_text(strip=True).replace('&', 'and') for link in path_links]
+# #     parent_obj, last_classification_obj = None, None
+    
+# #     for name in path_names:
+# #         classification_obj, _ = IndustryClassification.objects.get_or_create(
+# #             name=name, defaults={'parent': parent_obj}
+# #         )
+# #         parent_obj = last_classification_obj = classification_obj
+        
+# #     return last_classification_obj
+
+# # def parse_website_link(soup):
+# #     """
+# #     Finds the main company website link from the top links section,
+# #     reliably ignoring the BSE and NSE links.
+# #     """
+# #     company_links_div = soup.select_one('div.company-links')
+# #     if not company_links_div:
+# #         return None
+    
+# #     all_links = company_links_div.find_all('a', href=True)
+# #     for link in all_links:
+# #         href = link['href']
+# #         # The correct website is the first one that is NOT a stock exchange link
+# #         if 'bseindia.com' not in href and 'nseindia.com' not in href:
+# #             return href
+            
+# #     return None # Return None if no suitable link is found
+
+# # def parse_financial_table(soup, table_id):
+# #     """Parses a financial table into a structured JSON object, sorted chronologically."""
+# #     section = soup.select_one(f'section#{table_id}')
+# #     if not section: return {}
+# #     table = section.select_one('table.data-table')
+# #     if not table: return {}
+
+# #     original_headers = [th.get_text(strip=True) for th in table.select('thead th')][1:]
+# #     if not original_headers: return {}
+    
+# #     sorted_headers = sorted(original_headers, key=get_calendar_sort_key, reverse=True)
+    
+# #     body_data = []
+# #     for row in table.select('tbody tr'):
+# #         cols = row.select('td')
+# #         if not cols or 'sub' in row.get('class', []): continue
+# #         row_name = cols[0].get_text(strip=True).replace('+', '').strip()
+# #         if not row_name: continue
+        
+# #         original_values = [col.get_text(strip=True) for col in cols[1:]]
+# #         value_map = dict(zip(original_headers, original_values))
+        
+# #         sorted_values = [value_map.get(h, '') for h in sorted_headers]
+        
+# #         body_data.append({'Description': row_name, 'values': sorted_values})
+        
+# #     return {'headers': sorted_headers, 'body': body_data}
+
+# # def parse_shareholding_table(soup, table_id):
+# #     """Parses shareholding data, sorted chronologically."""
+# #     table = soup.select_one(f'div#{table_id} table.data-table')
+# #     if not table: return {}
+# #     original_headers = [th.get_text(strip=True) for th in table.select('thead th')][1:]
+# #     sorted_headers = sorted(original_headers, key=get_calendar_sort_key, reverse=True)
+    
+# #     data = {}
+# #     for row in table.select('tbody tr'):
+# #         cols = row.select('td')
+# #         if not cols or 'sub' in row.get('class', []): continue
+# #         row_name = cols[0].get_text(strip=True).replace('+', '').strip()
+# #         if not row_name: continue
+        
+# #         original_values = [col.get_text(strip=True) for col in cols[1:]]
+# #         value_map = dict(zip(original_headers, original_values))
+# #         row_data = {h: value_map.get(h, '') for h in sorted_headers}
+# #         data[row_name] = row_data
+        
+# #     return data
+
+# # def parse_growth_tables(soup):
+# #     """Parses the four small compounded growth tables."""
+# #     data = {}
+# #     pl_section = soup.select_one('section#profit-loss')
+# #     if not pl_section: return data
+
+# #     tables = pl_section.select('table.ranges-table')
+# #     for table in tables:
+# #         title_elem = table.select_one('th')
+# #         if title_elem:
+# #             title = title_elem.get_text(strip=True).replace(':', '')
+# #             table_data = {
+# #                 cols[0].get_text(strip=True).replace(':', ''): cols[1].get_text(strip=True)
+# #                 for row in table.select('tr')[1:] if len(cols := row.select('td')) == 2
+# #             }
+# #             data[title] = table_data
+# #     return data
+
+# # # --- MAIN DJANGO COMMAND ---
+
+# # class Command(BaseCommand):
+# #     help = 'Scrapes company fundamentals from screener.in, parses data in memory, and saves to the database.'
+
+# #     def handle(self, *args, **options):
+# #         self.stdout.write(self.style.SUCCESS("--- Starting On-the-Fly Fundamental Scraper ---"))
+        
+# #         company_urls_to_scrape = []
+# #         for i in range(1, 100):
+# #             list_url = f"https://www.screener.in/screens/515361/largecaptop-100midcap101-250smallcap251/?page={i}&limit=50"
+# #             self.stdout.write(f"Fetching company list from page {i}...")
+# #             list_soup = get_soup(list_url)
+# #             if not list_soup: continue
+
+# #             rows = list_soup.select('table.data-table tr[data-row-company-id]')
+# #             if not rows:
+# #                 self.stdout.write(self.style.WARNING("No more companies found. Stopping list scrape."))
+# #                 break
+            
+# #             for row in rows:
+# #                 link_tag = row.select_one('a')
+# #                 if link_tag and link_tag.get('href'):
+# #                     company_urls_to_scrape.append(f"https://www.screener.in{link_tag['href']}")
+            
+# #             time.sleep(1)
+
+# #         self.stdout.write(self.style.SUCCESS(f"Found {len(company_urls_to_scrape)} companies to process."))
+
+# #         for url in company_urls_to_scrape:
+# #             try:
+# #                 company_symbol = url.strip('/').split('/')[4]
+# #                 self.stdout.write(f"\n--- Processing: {company_symbol} ({url}) ---")
+                
+# #                 soup = get_soup(url)
+# #                 if not soup:
+# #                     self.stdout.write(self.style.ERROR(f"Could not fetch HTML for {company_symbol}. Skipping."))
+# #                     continue
+
+# #                 company_name = (soup.select_one('h1.margin-0').get_text(strip=True) 
+# #                                 if soup.select_one('h1.margin-0') else company_symbol)
+                
+# #                 # --- Replicated exact scraping logic from process_local_html.py ---
+# #                 ratios_data = {li.select_one('.name').get_text(strip=True): li.select_one('.value').get_text(strip=True) 
+# #                                for li in soup.select('#top-ratios li') if li.select_one('.name') and li.select_one('.value')}
+                
+# #                 bse_link = soup.select_one('a[href*="bseindia.com"]')
+# #                 bse_code = clean_text(bse_link.get_text(strip=True), "bse_code") if bse_link else None
+                
+# #                 nse_link = soup.select_one('a[href*="nseindia.com"]')
+# #                 nse_code = clean_text(nse_link.get_text(strip=True), "nse_code") if nse_link else None
+# #                 # --- End of replicated logic ---
+
+# #                 growth_tables = parse_growth_tables(soup)
+# #                 industry_object = process_industry_path(soup)
+
+# #                 defaults = {
+# #                     'name': company_name,
+# #                     'about': soup.select_one('.company-profile .about p').get_text(strip=True) if soup.select_one('.company-profile .about p') else None,
+# #                     'website': parse_website_link(soup), # Using the new robust function
+# #                     'bse_code': bse_code,
+# #                     'nse_code': nse_code,
+# #                     'market_cap': parse_number(ratios_data.get('Market Cap')),
+# #                     'current_price': parse_number(ratios_data.get('Current Price')),
+# #                     'high_low': clean_text(ratios_data.get('High / Low')),
+# #                     'stock_pe': parse_number(ratios_data.get('Stock P/E')),
+# #                     'book_value': parse_number(ratios_data.get('Book Value')),
+# #                     'dividend_yield': parse_number(ratios_data.get('Dividend Yield')),
+# #                     'roce': parse_number(ratios_data.get('ROCE')),
+# #                     'roe': parse_number(ratios_data.get('ROE')),
+# #                     'face_value': parse_number(ratios_data.get('Face Value')),
+# #                     'pros': [li.get_text(strip=True) for li in soup.select('.pros ul li')],
+# #                     'cons': [li.get_text(strip=True) for li in soup.select('.cons ul li')],
+# #                     'quarterly_results': parse_financial_table(soup, 'quarters'),
+# #                     'profit_loss_statement': parse_financial_table(soup, 'profit-loss'),
+# #                     'balance_sheet': parse_financial_table(soup, 'balance-sheet'),
+# #                     'cash_flow_statement': parse_financial_table(soup, 'cash-flow'),
+# #                     'ratios': parse_financial_table(soup, 'ratios'),
+# #                     'compounded_sales_growth': growth_tables.get('Compounded Sales Growth', {}),
+# #                     'compounded_profit_growth': growth_tables.get('Compounded Profit Growth', {}),
+# #                     'stock_price_cagr': growth_tables.get('Stock Price CAGR', {}),
+# #                     'return_on_equity': growth_tables.get('Return on Equity', {}),
+# #                     'shareholding_pattern': {'quarterly': parse_shareholding_table(soup, 'quarterly-shp')},
+# #                     'industry_classification': industry_object,
+# #                 }
+
+# #                 obj, created = Company.objects.update_or_create(symbol=company_symbol, defaults=defaults)
+# #                 action = "Created" if created else "Updated"
+# #                 self.stdout.write(self.style.SUCCESS(f"Successfully {action} data for {company_name} ({company_symbol})"))
+
+# #             except Exception as e:
+# #                 self.stdout.write(self.style.ERROR(f"An unexpected error occurred for {company_symbol}: {e}"))
+            
+# #             finally:
+# #                 time.sleep(1)
+
+# #         self.stdout.write(self.style.SUCCESS("\n--- Scraping process finished. ---"))
 
 # import requests
-# from bs4 import BeautifulSoup
-# import time
 # import re
-# import os
-# from django.core.management.base import BaseCommand
-# from fundamentals.models import Company
+# import time
+# import threading
+# from concurrent.futures import ThreadPoolExecutor
+# from bs4 import BeautifulSoup
 
-# # --- UTILITY FUNCTIONS (Corrected) ---
+# from django.core.management.base import BaseCommand
+# from django.db import connection
+# from fundamentals.models import Company, IndustryClassification
+
+# # --- UTILITY AND HELPER FUNCTIONS (Unchanged) ---
 
 # def get_soup(url):
-#     """Fetches a URL and returns a BeautifulSoup object and its raw text."""
-#     headers = {'User-Agent': 'Mozilla/5.0'}
+#     """Fetches a URL and returns a BeautifulSoup object."""
+#     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 #     try:
-#         response = requests.get(url, headers=headers, timeout=20)
+#         response = requests.get(url, headers=headers, timeout=25)
 #         response.raise_for_status()
-#         return BeautifulSoup(response.content, 'lxml'), response.text
+#         return BeautifulSoup(response.content, 'lxml')
 #     except requests.exceptions.RequestException as e:
-#         print(f"Error fetching {url}: {e}")
-#         return None, None
+#         # Error will be logged in the worker thread
+#         return None
 
-# def clean_text(text):
-#     """Cleans text by stripping whitespace and removing unwanted characters."""
+# def clean_text(text, field_name=""):
+#     """Cleans common text patterns from scraped strings."""
 #     if not text:
 #         return None
-#     # Remove currency symbols, commas, percentages, and "Cr." which is common
+#     if field_name in ["bse_code", "nse_code"]:
+#         return text.strip().replace('BSE:', '').replace('NSE:', '').strip()
 #     return text.strip().replace('₹', '').replace(',', '').replace('%', '').replace('Cr.', '').strip()
 
 # def parse_number(text):
-#     """Converts cleaned text to a float, handling potential errors."""
+#     """Parses a string to a float, returning None on failure."""
 #     cleaned = clean_text(text)
 #     if cleaned in [None, '']:
 #         return None
-#     # Extract the numerical part from the cleaned string.
 #     match = re.search(r'[-+]?\d*\.\d+|\d+', cleaned)
 #     if match:
 #         try:
@@ -42,543 +311,587 @@
 #             return None
 #     return None
 
+# def get_calendar_sort_key(header_string):
+#     """Creates a sortable key (year, month) from a date string like 'Mar 2024'."""
+#     MONTH_MAP = {
+#         'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+#         'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+#     }
+#     try:
+#         month_str, year_str = header_string.strip().split()
+#         year = int(year_str)
+#         month = MONTH_MAP.get(month_str, 0)
+#         return (year, month)
+#     except (ValueError, KeyError, IndexError):
+#         try:
+#             return (int(header_string), 0)
+#         except (ValueError, TypeError):
+#             return (0, 0)
 
-# # --- SCRAPING HELPER FUNCTIONS (Corrected) ---
+# # --- PARSING FUNCTIONS (Unchanged) ---
+
+# def process_industry_path(soup):
+#     """Parses the industry classification path and creates/gets DB objects."""
+#     peers_section = soup.select_one('section#peers')
+#     if not peers_section: return None
+    
+#     path_paragraph = peers_section.select_one('p.sub:not(#benchmarks)')
+#     if not path_paragraph: return None
+    
+#     path_links = path_paragraph.select('a')
+#     if not path_links: return None
+        
+#     path_names = [link.get_text(strip=True).replace('&', 'and') for link in path_links]
+#     parent_obj, last_classification_obj = None, None
+    
+#     for name in path_names:
+#         classification_obj, _ = IndustryClassification.objects.get_or_create(
+#             name=name, defaults={'parent': parent_obj}
+#         )
+#         parent_obj = last_classification_obj = classification_obj
+        
+#     return last_classification_obj
+
+# def parse_website_link(soup):
+#     """Finds the main company website link, ignoring exchange links."""
+#     company_links_div = soup.select_one('div.company-links')
+#     if not company_links_div:
+#         return None
+    
+#     all_links = company_links_div.find_all('a', href=True)
+#     for link in all_links:
+#         href = link['href']
+#         if 'bseindia.com' not in href and 'nseindia.com' not in href:
+#             return href
+            
+#     return None
 
 # def parse_financial_table(soup, table_id):
-#     """A generic function to parse financial tables like Quarters, P&L, etc."""
-#     table = soup.select_one(f'section#{table_id} table.data-table')
-#     if not table:
-#         return []
+#     """Parses a financial table into a structured JSON object, sorted chronologically."""
+#     section = soup.select_one(f'section#{table_id}')
+#     if not section: return {}
+#     table = section.select_one('table.data-table')
+#     if not table: return {}
 
-#     headers = [th.get_text(strip=True) for th in table.select('thead th')][1:]
-#     data = []
+#     original_headers = [th.get_text(strip=True) for th in table.select('thead th')][1:]
+#     if not original_headers: return {}
+    
+#     sorted_headers = sorted(original_headers, key=get_calendar_sort_key, reverse=True)
+    
+#     body_data = []
 #     for row in table.select('tbody tr'):
 #         cols = row.select('td')
-#         # Skip footer rows like 'Raw PDF'
-#         if not cols or 'sub' in row.get('class', []):
-#             continue
+#         if not cols or 'sub' in row.get('class', []): continue
+#         row_name = cols[0].get_text(strip=True).replace('+', '').strip()
+#         if not row_name: continue
         
-#         row_name_elem = cols[0]
-#         if not row_name_elem:
-#             continue
-            
-#         row_name = row_name_elem.get_text(strip=True).replace('+', '').strip()
-#         if not row_name:
-#             continue
+#         original_values = [col.get_text(strip=True) for col in cols[1:]]
+#         value_map = dict(zip(original_headers, original_values))
+        
+#         sorted_values = [value_map.get(h, '') for h in sorted_headers]
+        
+#         body_data.append({'Description': row_name, 'values': sorted_values})
+        
+#     return {'headers': sorted_headers, 'body': body_data}
 
-#         row_data = {'Description': row_name}
-        
-#         for i, col in enumerate(cols[1:]):
-#             if i < len(headers):
-#                 row_data[headers[i]] = col.get_text(strip=True)
-#         data.append(row_data)
-#     return data
 
 # def parse_shareholding_table(soup, table_id):
-#     """Parses shareholding tables (quarterly or yearly)."""
+#     """Parses shareholding data, sorted chronologically."""
 #     table = soup.select_one(f'div#{table_id} table.data-table')
-#     if not table:
-#         return {}
-
-#     headers = [th.get_text(strip=True) for th in table.select('thead th')][1:]
+#     if not table: return {}
+#     original_headers = [th.get_text(strip=True) for th in table.select('thead th')][1:]
+#     sorted_headers = sorted(original_headers, key=get_calendar_sort_key, reverse=True)
+    
 #     data = {}
 #     for row in table.select('tbody tr'):
 #         cols = row.select('td')
-#         if not cols or 'sub' in row.get('class', []):
-#             continue
+#         if not cols or 'sub' in row.get('class', []): continue
+#         row_name = cols[0].get_text(strip=True).replace('+', '').strip()
+#         if not row_name: continue
         
-#         row_name_elem = cols[0]
-#         if not row_name_elem:
-#             continue
-
-#         row_name = row_name_elem.get_text(strip=True).replace('+', '').strip()
-#         if not row_name:
-#             continue
-
-#         values = [col.get_text(strip=True) for col in cols[1:]]
-#         row_data = {headers[i]: values[i] for i in range(len(values))}
+#         original_values = [col.get_text(strip=True) for col in cols[1:]]
+#         value_map = dict(zip(original_headers, original_values))
+#         row_data = {h: value_map.get(h, '') for h in sorted_headers}
 #         data[row_name] = row_data
+        
 #     return data
 
 # def parse_growth_tables(soup):
-#     """Parses all four compounded growth tables."""
+#     """Parses the four small compounded growth tables."""
 #     data = {}
-#     tables = soup.select('#profit-loss table.ranges-table')
+#     pl_section = soup.select_one('section#profit-loss')
+#     if not pl_section: return data
+
+#     tables = pl_section.select('table.ranges-table')
 #     for table in tables:
 #         title_elem = table.select_one('th')
 #         if title_elem:
 #             title = title_elem.get_text(strip=True).replace(':', '')
-#             table_data = {}
-#             for row in table.select('tr')[1:]:
-#                 cols = row.select('td')
-#                 if len(cols) == 2:
-#                     key = cols[0].get_text(strip=True).replace(':', '')
-#                     value = cols[1].get_text(strip=True)
-#                     table_data[key] = value
+#             table_data = {
+#                 cols[0].get_text(strip=True).replace(':', ''): cols[1].get_text(strip=True)
+#                 for row in table.select('tr')[1:] if len(cols := row.select('td')) == 2
+#             }
 #             data[title] = table_data
 #     return data
 
-# def extract_document_links(soup, container_selector):
-#     """Extracts links from a specific document container."""
-#     container = soup.select_one(container_selector)
-#     if not container:
-#         return []
-    
-#     links = []
-#     for a in container.select('ul.list-links li a'):
-#         link_data = {
-#             'text': ' '.join(a.get_text(strip=True, separator=' ').split()),
-#             'href': a.get('href')
-#         }
-#         links.append(link_data)
-#     return links
 
-# # --- MAIN SCRAPER LOGIC (Corrected) ---
+# # --- MAIN DJANGO COMMAND ---
 
 # class Command(BaseCommand):
-#     help = 'Scrapes company fundamentals from screener.in'
+#     help = 'Scrapes company fundamentals from screener.in using multiple thread' \
+#     '' \
+#     's, parses data, and saves to the database.'
+
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         self.lock = threading.Lock() # Lock for thread-safe console output
+
+#     def add_arguments(self, parser):
+#         parser.add_argument(
+#             '--max-workers',
+#             type=int,
+#             default=10,
+#             help='The maximum number of threads to use for fetching company data.'
+#         )
+
+#     def _scrape_and_save_company_data(self, url):
+#         """Worker function to fetch, parse, and save data for a single company."""
+#         company_symbol = None
+#         try:
+#             company_symbol = url.strip('/').split('/')[-1]
+            
+#             with self.lock:
+#                 self.stdout.write(f"  [Thread] Processing: {company_symbol}")
+
+#             soup = get_soup(url)
+#             if not soup:
+#                 raise ValueError(f"Could not fetch or parse HTML from {url}")
+
+#             company_name = (soup.select_one('h1.margin-0').get_text(strip=True) 
+#                             if soup.select_one('h1.margin-0') else company_symbol)
+            
+#             ratios_data = {li.select_one('.name').get_text(strip=True): li.select_one('.value').get_text(strip=True) 
+#                            for li in soup.select('#top-ratios li') if li.select_one('.name') and li.select_one('.value')}
+            
+#             bse_link = soup.select_one('a[href*="bseindia.com"]')
+#             bse_code = clean_text(bse_link.get_text(strip=True), "bse_code") if bse_link else None
+            
+#             nse_link = soup.select_one('a[href*="nseindia.com"]')
+#             nse_code = clean_text(nse_link.get_text(strip=True), "nse_code") if nse_link else None
+
+#             growth_tables = parse_growth_tables(soup)
+#             industry_object = process_industry_path(soup)
+
+#             defaults = {
+#                 'name': company_name,
+#                 'about': soup.select_one('.company-profile .about p').get_text(strip=True) if soup.select_one('.company-profile .about p') else None,
+#                 'website': parse_website_link(soup),
+#                 'bse_code': bse_code,
+#                 'nse_code': nse_code,
+#                 'market_cap': parse_number(ratios_data.get('Market Cap')),
+#                 'current_price': parse_number(ratios_data.get('Current Price')),
+#                 'high_low': clean_text(ratios_data.get('High / Low')),
+#                 'stock_pe': parse_number(ratios_data.get('Stock P/E')),
+#                 'book_value': parse_number(ratios_data.get('Book Value')),
+#                 'dividend_yield': parse_number(ratios_data.get('Dividend Yield')),
+#                 'roce': parse_number(ratios_data.get('ROCE')),
+#                 'roe': parse_number(ratios_data.get('ROE')),
+#                 'face_value': parse_number(ratios_data.get('Face Value')),
+#                 'pros': [li.get_text(strip=True) for li in soup.select('.pros ul li')],
+#                 'cons': [li.get_text(strip=True) for li in soup.select('.cons ul li')],
+#                 'quarterly_results': parse_financial_table(soup, 'quarters'),
+#                 'profit_loss_statement': parse_financial_table(soup, 'profit-loss'),
+#                 'balance_sheet': parse_financial_table(soup, 'balance-sheet'),
+#                 'cash_flow_statement': parse_financial_table(soup, 'cash-flow'),
+#                 'ratios': parse_financial_table(soup, 'ratios'),
+#                 'compounded_sales_growth': growth_tables.get('Compounded Sales Growth', {}),
+#                 'compounded_profit_growth': growth_tables.get('Compounded Profit Growth', {}),
+#                 'stock_price_cagr': growth_tables.get('Stock Price CAGR', {}),
+#                 'return_on_equity': growth_tables.get('Return on Equity', {}),
+#                 'shareholding_pattern': {'quarterly': parse_shareholding_table(soup, 'quarterly-shp')},
+#                 'industry_classification': industry_object,
+#             }
+
+#             obj, created = Company.objects.update_or_create(symbol=company_symbol, defaults=defaults)
+#             action = "Created" if created else "Updated"
+            
+#             with self.lock:
+#                 self.stdout.write(self.style.SUCCESS(f"  [Thread] Successfully {action} data for {company_name} ({company_symbol})"))
+
+#         except Exception as e:
+#             with self.lock:
+#                 self.stdout.write(self.style.ERROR(f"  [Thread] FAILED for {company_symbol or url}: {e}"))
+#         finally:
+#             # IMPORTANT: Close the database connection for this thread
+#             connection.close()
 
 #     def handle(self, *args, **options):
-#         self.stdout.write("Starting company fundamentals scraper...")
+#         max_workers = options['max_workers']
+#         self.stdout.write(self.style.SUCCESS(f"--- Starting Multi-Threaded Fundamental Scraper (Max Workers: {max_workers}) ---"))
         
-#         visited_links_folder = 'visited_company_pages'
-#         if not os.path.exists(visited_links_folder):
-#             os.makedirs(visited_links_folder)
-#             self.stdout.write(f"Created directory: {visited_links_folder}")
-
-#         # 1. Scrape company names and symbols from the main list pages
-#         company_list = []
-#         for i in range(1, 100): 
+#         company_urls_to_scrape = []
+#         for i in range(1, 100):
 #             list_url = f"https://www.screener.in/screens/515361/largecaptop-100midcap101-250smallcap251/?page={i}&limit=50"
-#             self.stdout.write(f"Fetching page {i}: {list_url}")
-#             soup, _ = get_soup(list_url)
-#             if not soup:
-#                 continue
-
-#             rows = soup.select('table.data-table tr[data-row-company-id]')
-#             if not rows:
-#                 self.stdout.write(f"No more companies found on page {i}. Stopping.")
+#             self.stdout.write(f"Fetching company list from page {i}...")
+#             list_soup = get_soup(list_url)
+#             if not list_soup:
+#                 self.stdout.write(self.style.WARNING(f"Could not fetch page {i}. Stopping."))
 #                 break
-                
+
+#             rows = list_soup.select('table.data-table tr[data-row-company-id]')
+#             if not rows:
+#                 self.stdout.write(self.style.WARNING("No more companies found. Stopping list scrape."))
+#                 break
+            
 #             for row in rows:
 #                 link_tag = row.select_one('a')
-#                 if link_tag:
-#                     name = link_tag.get_text(strip=True)
-#                     href = link_tag['href']
-#                     symbol = href.split('/')[2]
-#                     # Append the full URL for later use
-#                     company_list.append({'name': name, 'symbol': symbol, 'url': f"https://www.screener.in{href}"})
+#                 if link_tag and link_tag.get('href'):
+#                     company_urls_to_scrape.append(f"https://www.screener.in{link_tag['href']}")
             
-#             time.sleep(1)
+#             time.sleep(2) # Be polite to the server when fetching list pages
 
-#         self.stdout.write(f"Found {len(company_list)} companies to process.")
+#         self.stdout.write(self.style.SUCCESS(f"\nFound {len(company_urls_to_scrape)} companies. Starting parallel processing..."))
 
-#         # 2. Scrape detailed info for each company
-#         for company_data in company_list:
-#             symbol = company_data['symbol']
-#             self.stdout.write(f"--- Processing {company_data['name']} ({symbol}) ---")
-            
-#             detail_url = company_data['url']
-#             soup, html_content = get_soup(detail_url)
-#             if not soup:
-#                 continue
-                
-#             # Store the visited HTML
-#             if html_content:
-#                 try:
-#                     with open(os.path.join(visited_links_folder, f"{symbol}.html"), "w", encoding="utf-8") as f:
-#                         f.write(html_content)
-#                     self.stdout.write(f"Saved HTML for {symbol}")
-#                 except Exception as e:
-#                     self.stdout.write(self.style.ERROR(f"Could not save HTML for {symbol}: {e}"))
+#         # Use ThreadPoolExecutor to process URLs in parallel
+#         with ThreadPoolExecutor(max_workers=max_workers) as executor:
+#             executor.map(self._scrape_and_save_company_data, company_urls_to_scrape)
 
-#             try:
-#                 # Basic Info
-#                 about_div = soup.select_one('.company-profile .about p')
-#                 about = about_div.get_text(strip=True) if about_div else None
-                
-#                 # Corrected website link selector
-#                 website_link = soup.select_one('.company-links a:not([href*="bseindia.com"]):not([href*="nseindia.com"])')
-#                 website = website_link['href'] if website_link else None
+#         self.stdout.write(self.style.SUCCESS("\n--- Scraping process finished. ---"))
 
-#                 bse_link = soup.select_one('a[href*="bseindia.com"]')
-#                 bse_code = bse_link.get_text(strip=True).replace('BSE:', '').strip() if bse_link else None
-                
-#                 nse_link = soup.select_one('a[href*="nseindia.com"]')
-#                 nse_code = nse_link.get_text(strip=True).replace('NSE:', '').strip() if nse_link else None
-
-#                 # Ratios (This is now parsed correctly)
-#                 ratios_data = {}
-#                 for li in soup.select('#top-ratios li'):
-#                     name_elem = li.select_one('.name')
-#                     value_elem = li.select_one('.value')
-#                     if name_elem and value_elem:
-#                         name = name_elem.get_text(strip=True)
-#                         value = value_elem.get_text(strip=True)
-#                         ratios_data[name] = value
-
-#                 # Pros and Cons
-#                 pros = [li.get_text(strip=True) for li in soup.select('.pros ul li')]
-#                 cons = [li.get_text(strip=True) for li in soup.select('.cons ul li')]
-
-#                 # Growth tables
-#                 growth_tables = parse_growth_tables(soup)
-
-#                 # Shareholding pattern
-#                 shareholding = {
-#                     'quarterly': parse_shareholding_table(soup, 'quarterly-shp'),
-#                     'yearly': parse_shareholding_table(soup, 'yearly-shp')
-#                 }
-                
-#                 # Corrected document extraction with specific selectors
-#                 annual_reports = extract_document_links(soup, 'div.annual-reports')
-#                 credit_ratings = extract_document_links(soup, 'div.credit-ratings')
-
-#                 # Update or Create Company in DB
-#                 company_obj, created = Company.objects.update_or_create(
-#                     symbol=symbol,
-#                     defaults={
-#                         'name': company_data['name'],
-#                         'about': about,
-#                         'website': website,
-#                         'bse_code': bse_code,
-#                         'nse_code': nse_code,
-#                         'market_cap': parse_number(ratios_data.get('Market Cap')),
-#                         'current_price': parse_number(ratios_data.get('Current Price')),
-#                         'high_low': clean_text(ratios_data.get('High / Low')),
-#                         'stock_pe': parse_number(ratios_data.get('Stock P/E')),
-#                         'book_value': parse_number(ratios_data.get('Book Value')),
-#                         'dividend_yield': parse_number(ratios_data.get('Dividend Yield')),
-#                         'roce': parse_number(ratios_data.get('ROCE')),
-#                         'roe': parse_number(ratios_data.get('ROE')),
-#                         'face_value': parse_number(ratios_data.get('Face Value')),
-#                         'pros': pros,
-#                         'cons': cons,
-#                         'quarterly_results': parse_financial_table(soup, 'quarters'),
-#                         'profit_loss_statement': parse_financial_table(soup, 'profit-loss'),
-#                         'balance_sheet': parse_financial_table(soup, 'balance-sheet'),
-#                         'cash_flow_statement': parse_financial_table(soup, 'cash-flow'),
-#                         'ratios': parse_financial_table(soup, 'ratios'),
-#                         'compounded_sales_growth': growth_tables.get('Compounded Sales Growth', {}),
-#                         'compounded_profit_growth': growth_tables.get('Compounded Profit Growth', {}),
-#                         'stock_price_cagr': growth_tables.get('Stock Price CAGR', {}),
-#                         'return_on_equity': growth_tables.get('Return on Equity', {}),
-#                         'shareholding_pattern': shareholding,
-#                         'annual_reports': annual_reports,
-#                         'credit_ratings': credit_ratings, 
-#                     }
-#                 )
-                
-#                 action = "Created" if created else "Updated"
-#                 self.stdout.write(self.style.SUCCESS(f"Successfully {action} data for {company_data['name']}"))
-
-#             except Exception as e:
-#                 import traceback
-#                 self.stdout.write(self.style.ERROR(f"Error processing {company_data['name']}: {e}"))
-#                 traceback.print_exc()
-
-#             time.sleep(1)
-
-#         self.stdout.write(self.style.SUCCESS("Scraping finished."))
-# fundamentals/management/commands/populate_fundamentals.py
-
-import os
+import requests
 import re
 import time
-from decimal import Decimal
+import threading
+import random
+from concurrent.futures import ThreadPoolExecutor
 from bs4 import BeautifulSoup
+
 from django.core.management.base import BaseCommand
-import requests
-from fundamentals.models import Company
+from django.db import connection
+from fundamentals.models import Company, IndustryClassification
 
-# --- UTILITY FUNCTIONS ---
+# --- NEW: ANTI-DETECTION CONFIGURATION ---
+USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0',
+]
 
-def get_soup(url):
-    """Fetches a URL and returns a BeautifulSoup object and its raw text."""
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    try:
-        response = requests.get(url, headers=headers, timeout=20)
-        response.raise_for_status()
-        return BeautifulSoup(response.content, 'lxml'), response.text
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching {url}: {e}")
-        return None, None
 
-def clean_text(text):
-    """Cleans text by stripping whitespace and removing unwanted characters."""
-    if not text: return None
+# --- UPDATED UTILITY AND HELPER FUNCTIONS ---
+
+def get_soup(session, url, retries=3, backoff_factor=0.5, referer=None):
+    """
+    Fetches a URL using a session object with rotating headers and a retry mechanism.
+    """
+    # Choose a random User-Agent for this request
+    headers = {
+        'User-Agent': random.choice(USER_AGENTS),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br, zstd',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+    }
+    if referer:
+        headers['Referer'] = referer
+
+    for attempt in range(retries):
+        try:
+            # PROXY INTEGRATION POINT:
+            # proxies = {'http': 'http://user:pass@host:port', 'https': 'https://user:pass@host:port'}
+            # response = session.get(url, headers=headers, timeout=25, proxies=proxies)
+            
+            response = session.get(url, headers=headers, timeout=25)
+            response.raise_for_status()
+            return BeautifulSoup(response.content, 'lxml')
+        except requests.exceptions.RequestException as e:
+            if attempt < retries - 1:
+                wait_time = backoff_factor * (2 ** attempt)
+                # Using print here as stdout might be locked by another thread
+                print(f"Request to {url} failed: {e}. Retrying in {wait_time:.2f}s... (Attempt {attempt + 1}/{retries})")
+                time.sleep(wait_time)
+            else:
+                return None
+    return None
+
+# --- Other helper functions remain unchanged ---
+# (clean_text, parse_number, get_calendar_sort_key, etc.)
+# ... (rest of the parsing functions from previous answer) ...
+
+def clean_text(text, field_name=""):
+    """Cleans common text patterns from scraped strings."""
+    if not text:
+        return None
+    if field_name in ["bse_code", "nse_code"]:
+        return text.strip().replace('BSE:', '').replace('NSE:', '').strip()
     return text.strip().replace('₹', '').replace(',', '').replace('%', '').replace('Cr.', '').strip()
 
 def parse_number(text):
-    """Converts cleaned text to a float, handling potential errors."""
+    """Parses a string to a float, returning None on failure."""
     cleaned = clean_text(text)
-    if cleaned in [None, '']: return None
+    if cleaned in [None, '']:
+        return None
     match = re.search(r'[-+]?\d*\.\d+|\d+', cleaned)
     if match:
-        try: return float(match.group(0))
-        except (ValueError, TypeError): return None
+        try:
+            return float(match.group(0))
+        except (ValueError, TypeError):
+            return None
     return None
 
-# --- SCRAPING HELPER FUNCTIONS ---
+def get_calendar_sort_key(header_string):
+    """Creates a sortable key (year, month) from a date string like 'Mar 2024'."""
+    MONTH_MAP = {
+        'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+        'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+    }
+    try:
+        month_str, year_str = header_string.strip().split()
+        year = int(year_str)
+        month = MONTH_MAP.get(month_str, 0)
+        return (year, month)
+    except (ValueError, KeyError, IndexError):
+        try:
+            return (int(header_string), 0)
+        except (ValueError, TypeError):
+            return (0, 0)
 
-def parse_industry_classification(soup):
-    """Parses the industry classification breadcrumb from the peers section."""
+def process_industry_path(soup):
+    """Parses the industry classification path and creates/gets DB objects."""
     peers_section = soup.select_one('section#peers')
     if not peers_section: return None
+    
     path_paragraph = peers_section.select_one('p.sub:not(#benchmarks)')
     if not path_paragraph: return None
+    
     path_links = path_paragraph.select('a')
     if not path_links: return None
-    return ' > '.join([link.get_text(strip=True).replace('&', 'and') for link in path_links])
-
-def get_latest_quarterly_value(results, key):
-    """Extracts the latest value from a quarterly results JSON list."""
-    if not results or not isinstance(results, list): return None
-    for quarter in reversed(results):
-        if quarter.get(key) and quarter.get(key) not in ['--', '']:
-            return parse_number(quarter.get(key))
-    return None
-
-def get_latest_financial_value(table_data, description):
-    """Gets the latest value for a specific row from a parsed financial table."""
-    if not table_data: return None
-    for row in table_data:
-        if row.get('Description') == description:
-            keys = list(row.keys())
-            if len(keys) > 1:
-                latest_date_key = keys[-1]
-                return parse_number(row[latest_date_key])
-    return None
-
-def calculate_debt_to_equity(balance_sheet_data):
-    """Calculates Debt/Equity ratio from balance sheet data."""
-    if not balance_sheet_data: return None
-    borrowings = get_latest_financial_value(balance_sheet_data, 'Borrowings')
-    reserves = get_latest_financial_value(balance_sheet_data, 'Reserves')
-    equity_capital = get_latest_financial_value(balance_sheet_data, 'Equity Capital')
+        
+    path_names = [link.get_text(strip=True).replace('&', 'and') for link in path_links]
+    parent_obj, last_classification_obj = None, None
     
-    if borrowings is not None and reserves is not None and equity_capital is not None:
-        total_equity = equity_capital + reserves
-        if total_equity > 0:
-            return round(borrowings / total_equity, 2)
+    for name in path_names:
+        classification_obj, _ = IndustryClassification.objects.get_or_create(
+            name=name, defaults={'parent': parent_obj}
+        )
+        parent_obj = last_classification_obj = classification_obj
+        
+    return last_classification_obj
+
+def parse_website_link(soup):
+    """Finds the main company website link, ignoring exchange links."""
+    company_links_div = soup.select_one('div.company-links')
+    if not company_links_div:
+        return None
+    
+    all_links = company_links_div.find_all('a', href=True)
+    for link in all_links:
+        href = link['href']
+        if 'bseindia.com' not in href and 'nseindia.com' not in href:
+            return href
+            
     return None
 
 def parse_financial_table(soup, table_id):
+    """Parses a financial table into a structured JSON object, sorted chronologically."""
     section = soup.select_one(f'section#{table_id}')
-    if not section: return []
+    if not section: return {}
     table = section.select_one('table.data-table')
-    if not table: return []
-    headers = [th.get_text(strip=True) for th in table.select('thead th')][1:]
-    data = []
+    if not table: return {}
+
+    original_headers = [th.get_text(strip=True) for th in table.select('thead th')][1:]
+    if not original_headers: return {}
+    
+    sorted_headers = sorted(original_headers, key=get_calendar_sort_key, reverse=True)
+    
+    body_data = []
     for row in table.select('tbody tr'):
         cols = row.select('td')
         if not cols or 'sub' in row.get('class', []): continue
         row_name = cols[0].get_text(strip=True).replace('+', '').strip()
         if not row_name: continue
-        row_data = {'Description': row_name}
-        for i, col in enumerate(cols[1:]):
-            if i < len(headers): row_data[headers[i]] = col.get_text(strip=True)
-        data.append(row_data)
-    return data
+        
+        original_values = [col.get_text(strip=True) for col in cols[1:]]
+        value_map = dict(zip(original_headers, original_values))
+        
+        sorted_values = [value_map.get(h, '') for h in sorted_headers]
+        
+        body_data.append({'Description': row_name, 'values': sorted_values})
+        
+    return {'headers': sorted_headers, 'body': body_data}
+
 
 def parse_shareholding_table(soup, table_id):
+    """Parses shareholding data, sorted chronologically."""
     table = soup.select_one(f'div#{table_id} table.data-table')
     if not table: return {}
-    headers = [th.get_text(strip=True) for th in table.select('thead th')][1:]
+    original_headers = [th.get_text(strip=True) for th in table.select('thead th')][1:]
+    sorted_headers = sorted(original_headers, key=get_calendar_sort_key, reverse=True)
+    
     data = {}
     for row in table.select('tbody tr'):
         cols = row.select('td')
         if not cols or 'sub' in row.get('class', []): continue
         row_name = cols[0].get_text(strip=True).replace('+', '').strip()
         if not row_name: continue
-        values = [col.get_text(strip=True) for col in cols[1:]]
-        row_data = {headers[i]: values[i] for i in range(len(values))}
+        
+        original_values = [col.get_text(strip=True) for col in cols[1:]]
+        value_map = dict(zip(original_headers, original_values))
+        row_data = {h: value_map.get(h, '') for h in sorted_headers}
         data[row_name] = row_data
+        
     return data
 
 def parse_growth_tables(soup):
+    """Parses the four small compounded growth tables."""
     data = {}
-    tables = soup.select('#profit-loss table.ranges-table')
+    pl_section = soup.select_one('section#profit-loss')
+    if not pl_section: return data
+
+    tables = pl_section.select('table.ranges-table')
     for table in tables:
         title_elem = table.select_one('th')
         if title_elem:
             title = title_elem.get_text(strip=True).replace(':', '')
-            table_data = {}
-            for row in table.select('tr')[1:]:
-                cols = row.select('td')
-                if len(cols) == 2: table_data[cols[0].get_text(strip=True).replace(':', '')] = cols[1].get_text(strip=True)
+            table_data = {
+                cols[0].get_text(strip=True).replace(':', ''): cols[1].get_text(strip=True)
+                for row in table.select('tr')[1:] if len(cols := row.select('td')) == 2
+            }
             data[title] = table_data
     return data
 
-def extract_document_links(soup, container_selector):
-    container = soup.select_one(container_selector)
-    if not container: return []
-    links = []
-    for a in container.select('ul.list-links li a'):
-        links.append({'text': ' '.join(a.get_text(strip=True, separator=' ').split()), 'href': a.get('href')})
-    return links
-
-def extract_concall_links(soup):
-    container = soup.select_one('div.concalls')
-    if not container: return []
-    concalls = []
-    for li in container.select('ul.list-links li'):
-        date = li.select_one('div.nowrap').get_text(strip=True) if li.select_one('div.nowrap') else "N/A"
-        links = {a.get_text(strip=True): a.get('href') for a in li.select('a.concall-link')}
-        if date != "N/A" and links: concalls.append({'date': date, 'links': links})
-    return concalls
-
+# --- MAIN DJANGO COMMAND ---
 
 class Command(BaseCommand):
-    help = 'Scrapes, parses, and populates company and peer data in one go.'
+    help = 'Scrapes company fundamentals with anti-detection measures.'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lock = threading.Lock()
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--max-workers', type=int, default=10,
+            help='The maximum number of threads to use for fetching.'
+        )
+
+    def _scrape_and_save_company_data(self, args):
+        """Worker function that now accepts a session and referer URL."""
+        url, session, list_url_referer = args
+        company_symbol = None
+        try:
+            company_symbol = url.strip('/').split('/')[-1]
+            
+            with self.lock:
+                self.stdout.write(f"  [Thread] Processing: {company_symbol}")
+
+            soup = get_soup(session, url, referer=list_url_referer)
+            if not soup:
+                raise ValueError(f"Could not fetch HTML from {url} after multiple retries.")
+
+            # ... (All data parsing logic remains exactly the same) ...
+            company_name = (soup.select_one('h1.margin-0').get_text(strip=True) 
+                            if soup.select_one('h1.margin-0') else company_symbol)
+            
+            ratios_data = {li.select_one('.name').get_text(strip=True): li.select_one('.value').get_text(strip=True) 
+                           for li in soup.select('#top-ratios li') if li.select_one('.name') and li.select_one('.value')}
+            
+            bse_link = soup.select_one('a[href*="bseindia.com"]')
+            bse_code = clean_text(bse_link.get_text(strip=True), "bse_code") if bse_link else None
+            
+            nse_link = soup.select_one('a[href*="nseindia.com"]')
+            nse_code = clean_text(nse_link.get_text(strip=True), "nse_code") if nse_link else None
+
+            growth_tables = parse_growth_tables(soup)
+            industry_object = process_industry_path(soup)
+
+            defaults = {
+                'name': company_name,
+                'about': soup.select_one('.company-profile .about p').get_text(strip=True) if soup.select_one('.company-profile .about p') else None,
+                'website': parse_website_link(soup),
+                'bse_code': bse_code,
+                'nse_code': nse_code,
+                'market_cap': parse_number(ratios_data.get('Market Cap')),
+                'current_price': parse_number(ratios_data.get('Current Price')),
+                'high_low': clean_text(ratios_data.get('High / Low')),
+                'stock_pe': parse_number(ratios_data.get('Stock P/E')),
+                'book_value': parse_number(ratios_data.get('Book Value')),
+                'dividend_yield': parse_number(ratios_data.get('Dividend Yield')),
+                'roce': parse_number(ratios_data.get('ROCE')),
+                'roe': parse_number(ratios_data.get('ROE')),
+                'face_value': parse_number(ratios_data.get('Face Value')),
+                'pros': [li.get_text(strip=True) for li in soup.select('.pros ul li')],
+                'cons': [li.get_text(strip=True) for li in soup.select('.cons ul li')],
+                'quarterly_results': parse_financial_table(soup, 'quarters'),
+                'profit_loss_statement': parse_financial_table(soup, 'profit-loss'),
+                'balance_sheet': parse_financial_table(soup, 'balance-sheet'),
+                'cash_flow_statement': parse_financial_table(soup, 'cash-flow'),
+                'ratios': parse_financial_table(soup, 'ratios'),
+                'compounded_sales_growth': growth_tables.get('Compounded Sales Growth', {}),
+                'compounded_profit_growth': growth_tables.get('Compounded Profit Growth', {}),
+                'stock_price_cagr': growth_tables.get('Stock Price CAGR', {}),
+                'return_on_equity': growth_tables.get('Return on Equity', {}),
+                'shareholding_pattern': {'quarterly': parse_shareholding_table(soup, 'quarterly-shp')},
+                'industry_classification': industry_object,
+            }
+
+            obj, created = Company.objects.update_or_create(symbol=company_symbol, defaults=defaults)
+            action = "Created" if created else "Updated"
+            
+            with self.lock:
+                self.stdout.write(self.style.SUCCESS(f"  [Thread] Successfully {action} data for {company_name}"))
+
+        except Exception as e:
+            with self.lock:
+                self.stdout.write(self.style.ERROR(f"  [Thread] FAILED for {company_symbol or url}: {e}"))
+        finally:
+            # Add a small, randomized delay to mimic human behavior
+            time.sleep(random.uniform(1, 3))
+            connection.close()
 
     def handle(self, *args, **options):
+        max_workers = options['max_workers']
+        self.stdout.write(self.style.SUCCESS(f"--- Starting Scraper (Max Workers: {max_workers}) ---"))
         
-        # --- PHASE 1: SCRAPE COMPANY LIST AND SAVE HTML LOCALLY ---
-        self.stdout.write(self.style.SUCCESS("--- PHASE 1: Scraping company list and saving HTML files ---"))
-        folder_path = 'visited_company_pages'
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-            self.stdout.write(f"Created directory: {folder_path}")
-
-        company_list = []
-        for i in range(1, 101): # Scrape up to 100 pages
-            list_url = f"https://www.screener.in/screens/515361/largecaptop-100midcap101-250smallcap251/?page={i}&limit=50"
-            self.stdout.write(f"Fetching company list from page {i}...")
-            soup, _ = get_soup(list_url)
-            if not soup: continue
-
-            rows = soup.select('table.data-table tr[data-row-company-id]')
-            if not rows:
-                self.stdout.write(self.style.WARNING(f"No more companies found on page {i}. Stopping list scrape."))
-                break
-            
-            for row in rows:
-                link_tag = row.select_one('a')
-                if link_tag:
-                    href = link_tag['href']
-                    symbol = href.split('/')[2]
-                    company_list.append({'symbol': symbol, 'url': f"https://www.screener.in{href}"})
-            time.sleep(1)
-
-        self.stdout.write(f"Found {len(company_list)} companies. Now fetching and saving individual HTML pages.")
+        company_urls_to_scrape = []
         
-        for company_data in company_list:
-            symbol = company_data['symbol']
-            file_path = os.path.join(folder_path, f"{symbol}.html")
-            if os.path.exists(file_path):
-                self.stdout.write(self.style.NOTICE(f"HTML for {symbol} already exists. Skipping download."))
-                continue
-
-            self.stdout.write(f"Downloading HTML for {symbol}...")
-            soup, html_content = get_soup(company_data['url'])
-            if html_content:
-                with open(file_path, "w", encoding="utf-8") as f: f.write(html_content)
-            time.sleep(1)
-
-        self.stdout.write(self.style.SUCCESS("--- PHASE 1 Complete. ---"))
-
-
-        # --- PHASE 2: PARSE LOCAL FILES AND POPULATE DATABASE ---
-        self.stdout.write(self.style.SUCCESS("\n--- PHASE 2: Parsing local HTML and populating database ---"))
-        html_files = [f for f in os.listdir(folder_path) if f.endswith('.html')]
-        self.stdout.write(f"Found {len(html_files)} HTML files to process.")
-
-        for filename in html_files:
-            company_symbol = os.path.splitext(filename)[0]
-            file_path = os.path.join(folder_path, filename)
-            self.stdout.write(f"Parsing {filename}...")
-
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f: soup = BeautifulSoup(f.read(), 'lxml')
+        # Create a single session to handle cookies and connection pooling
+        with requests.Session() as session:
+            for i in range(1, 100):
+                list_url = f"https://www.screener.in/screens/515361/largecaptop-100midcap101-250smallcap251/?page={i}&limit=50"
+                self.stdout.write(f"Fetching company list from page {i}...")
                 
-                name_elem = soup.select_one('h1.margin-0'); company_name = name_elem.get_text(strip=True) if name_elem else company_symbol
+                # We pass the session to get_soup
+                list_soup = get_soup(session, list_url) 
                 
-                ratios_data = {li.select_one('.name').get_text(strip=True): li.select_one('.value').get_text(strip=True) for li in soup.select('#top-ratios li') if li.select_one('.name') and li.select_one('.value')}
-                growth_tables = parse_growth_tables(soup)
+                if not list_soup:
+                    self.stdout.write(self.style.ERROR(f"Could not fetch page {i}. Stopping list scrape."))
+                    break
+
+                rows = list_soup.select('table.data-table tr[data-row-company-id]')
+                if not rows:
+                    self.stdout.write(self.style.WARNING("No more companies found. Stopping."))
+                    break
                 
-                defaults = {
-                    'name': company_name,
-                    'about': soup.select_one('.company-profile .about p').get_text(strip=True) if soup.select_one('.company-profile .about p') else None,
-                    'website': soup.select_one('.company-links a:not([href*="bseindia.com"]):not([href*="nseindia.com"])')['href'] if soup.select_one('.company-links a:not([href*="bseindia.com"]):not([href*="nseindia.com"])') else None,
-                    'bse_code': clean_text(soup.select_one('a[href*="bseindia.com"]').get_text(strip=True)) if soup.select_one('a[href*="bseindia.com"]') else None,
-                    'nse_code': clean_text(soup.select_one('a[href*="nseindia.com"]').get_text(strip=True)) if soup.select_one('a[href*="nseindia.com"]') else None,
-                    'market_cap': parse_number(ratios_data.get('Market Cap')),
-                    'current_price': parse_number(ratios_data.get('Current Price')),
-                    'high_low': clean_text(ratios_data.get('High / Low')),
-                    'stock_pe': parse_number(ratios_data.get('Stock P/E')),
-                    'book_value': parse_number(ratios_data.get('Book Value')),
-                    'dividend_yield': parse_number(ratios_data.get('Dividend Yield')),
-                    'roce': parse_number(ratios_data.get('ROCE')),
-                    'roe': parse_number(ratios_data.get('ROE')),
-                    'face_value': parse_number(ratios_data.get('Face Value')),
-                    'pros': [li.get_text(strip=True) for li in soup.select('.pros ul li')],
-                    'cons': [li.get_text(strip=True) for li in soup.select('.cons ul li')],
-                    'quarterly_results': parse_financial_table(soup, 'quarters'),
-                    'profit_loss_statement': parse_financial_table(soup, 'profit-loss'),
-                    'balance_sheet': parse_financial_table(soup, 'balance-sheet'),
-                    'cash_flow_statement': parse_financial_table(soup, 'cash-flow'),
-                    'ratios': parse_financial_table(soup, 'ratios'),
-                    'compounded_sales_growth': growth_tables.get('Compounded Sales Growth', {}),
-                    'compounded_profit_growth': growth_tables.get('Compounded Profit Growth', {}),
-                    'stock_price_cagr': growth_tables.get('Stock Price CAGR', {}),
-                    'return_on_equity': growth_tables.get('Return on Equity', {}),
-                    'shareholding_pattern': {'quarterly': parse_shareholding_table(soup, 'quarterly-shp'), 'yearly': parse_shareholding_table(soup, 'yearly-shp')},
-                    'announcements': extract_document_links(soup, '#company-announcements-tab'),
-                    'annual_reports': extract_document_links(soup, 'div.annual-reports'),
-                    'credit_ratings': extract_document_links(soup, 'div.credit-ratings'),
-                    'concalls': extract_concall_links(soup),
-                    'industry_classification': parse_industry_classification(soup)
-                }
+                for row in rows:
+                    link_tag = row.select_one('a')
+                    if link_tag and link_tag.get('href'):
+                        # Store the page URL along with the company URL to use as a 'Referer'
+                        company_url = f"https://www.screener.in{link_tag['href']}"
+                        company_urls_to_scrape.append((company_url, list_url))
                 
-                Company.objects.update_or_create(symbol=company_symbol, defaults=defaults)
+                time.sleep(random.uniform(2, 4)) # Randomize delay between list pages
 
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Error during PHASE 2 for {filename}: {e}"))
-        
-        self.stdout.write(self.style.SUCCESS("--- PHASE 2 Complete. ---"))
+            self.stdout.write(self.style.SUCCESS(f"\nFound {len(company_urls_to_scrape)} companies. Starting parallel processing..."))
 
-        # --- PHASE 3: BUILD AND SAVE PEER COMPARISON DATA ---
-        self.stdout.write(self.style.SUCCESS("\n--- PHASE 3: Building peer comparison data ---"))
-        
-        all_companies = list(Company.objects.all())
-        industry_groups = {}
-        for company in all_companies:
-            if company.industry_classification:
-                industry_groups.setdefault(company.industry_classification, []).append(company)
+            # Prepare arguments for the worker function
+            worker_args = [(url, session, referer) for url, referer in company_urls_to_scrape]
 
-        self.stdout.write(f"Found {len(industry_groups)} unique industry groups to process.")
-        
-        update_count = 0
-        for company in all_companies:
-            if not company.industry_classification:
-                continue
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # We pass the session object to each worker
+                executor.map(self._scrape_and_save_company_data, worker_args)
 
-            peer_objects = [p for p in industry_groups.get(company.industry_classification, []) if p.symbol != company.symbol]
-            
-            peer_comparison_data = []
-            for peer in peer_objects:
-                cmp_bv = None
-                if peer.current_price and peer.book_value and float(peer.book_value) > 0:
-                    cmp_bv = round(float(peer.current_price) / float(peer.book_value), 2)
-                
-                peer_dict = {
-                    "name": peer.name,
-                    "cmp": float(peer.current_price) if peer.current_price is not None else None,
-                    "pe": float(peer.stock_pe) if peer.stock_pe is not None else None,
-                    "mar_cap_cr": float(peer.market_cap) if peer.market_cap is not None else None,
-                    "div_yld_pct": float(peer.dividend_yield) if peer.dividend_yield is not None else None,
-                    "np_qtr_cr": get_latest_quarterly_value(peer.quarterly_results, 'Net Profit'),
-                    "sales_qtr_cr": get_latest_quarterly_value(peer.quarterly_results, 'Sales'),
-                    "roce_pct": float(peer.roce) if peer.roce is not None else None,
-                    "cmp_bv": cmp_bv,
-                    "debt_eq": calculate_debt_to_equity(peer.balance_sheet),
-                }
-                peer_comparison_data.append(peer_dict)
-
-            company.peer_comparison = peer_comparison_data
-            company.save(update_fields=['peer_comparison'])
-            update_count += 1
-
-        self.stdout.write(self.style.SUCCESS(f"--- PHASE 3 Complete. Updated peer data for {update_count} companies. ---"))
+        self.stdout.write(self.style.SUCCESS("\n--- Scraping process finished. ---"))
