@@ -1,36 +1,22 @@
 # screener/urls.py (App level)
 from django.urls import path
 from .views import (
-    DashboardView,
+    ScreenerDashboardView,
     indicator_list_api,
-    indicator_params_api, # Changed from indicator_params to match views_py_cleaned_v2
+    indicator_params_api,
     run_screener,
-    # ScanListView, # Commented out as it was removed from the cleaned views.py
-    # ScanCreateView, ScanUpdateView, ScanRunView, # Commented out
-    # indicator_list, # This was an older version, indicator_list_api is used
-    # screener_builder, # Commented out
-    # ajax_scan # Commented out
 )
 from screener import views
 
+# FIX: Added app_name to register the 'screener' namespace
+app_name = 'screener'
+
 urlpatterns = [
-    path('', DashboardView.as_view(), name='dashboard'),
+    path('', ScreenerDashboardView.as_view(), name='dashboard'),
     path('api/indicators/', indicator_list_api, name='api_indicator_list'),
-    path('api/indicator_params/', indicator_params_api, name='api_indicator_params'), # Ensure view name matches
+    path('api/indicator_params/', indicator_params_api, name='api_indicator_params'),
     path('api/run_screener/', run_screener, name='api_run_screener'),
     path('api/saved_scans/', views.saved_scans_list, name='saved_scans_list'),
     path('api/save_scan/', views.save_scan, name='save_scan'),
-    path('api/run_backtest/', views.run_backtest_api, name='api_run_backtest'), # Add this line
-
-    
-    # Commenting out URLs related to views that were removed for cleaning.
-    # If you need the saved scan functionality, you'll need to ensure those views
-    # are correctly defined in views.py or managed in a separate module.
-    # path('scans/', ScanListView.as_view(), name='scan_list'),
-    # path('scan/new/', ScanCreateView.as_view(), name='scan_create'),
-    # path('scan/<int:pk>/edit/', ScanUpdateView.as_view(), name='scan_edit'),
-    # path('scan/<int:pk>/run/', ScanRunView.as_view(), name='scan_run_saved'),
-    # path('screener/', screener_builder, name='screener_builder_page'),
-    # path('ajax-scan/', ajax_scan, name='ajax_scan_endpoint'),
-
+    path('api/run_backtest/', views.run_backtest_api, name='api_run_backtest'),
 ]

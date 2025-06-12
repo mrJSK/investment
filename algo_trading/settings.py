@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'screener',
     'ml_dashboard',
     'dashboard',
-    'fundamentals'
+    'fundamentals',
+    'market_data',
 ]
 
 MIDDLEWARE = [

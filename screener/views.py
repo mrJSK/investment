@@ -78,9 +78,9 @@ def get_indicator_nodes_from_ast(ast_node):
     return list(unique_nodes.values())
 
 
-# --- Main Dashboard View (No changes) ---
-class DashboardView(TemplateView):
-    template_name = 'screener/dashboard.html'
+# --- Main ScreenerDashboard View (No changes) ---
+class ScreenerDashboardView(TemplateView):
+    template_name = 'screener/screenerdashboard.html'
 
 # --- API Endpoints for Frontend (No changes) ---
 def indicator_list_api(request):

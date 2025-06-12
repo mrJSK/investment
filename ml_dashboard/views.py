@@ -12,11 +12,11 @@ from .train_utils import (
     to_python_type,
 )
 
-def dashboard(request):
+def ml_dashboard(request):
     datasets = get_available_datasets()
     models = get_available_models()
     indicators = get_all_talib_features()
-    return render(request, 'ml_dashboard/dashboard.html', {
+    return render(request, 'ml_dashboard/ml_dashboard.html', {
         'ml_models': models,
         'datasets': datasets,
         'talib_features': indicators

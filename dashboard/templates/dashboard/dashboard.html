@@ -71,6 +71,21 @@
       .formatted-text {
         white-space: pre-wrap;
       }
+      .fr-accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease-in-out;
+        background-color: #1f2937dd;
+      }
+      .fr-accordion-header svg {
+        transition: transform 0.3s ease;
+      }
+      .fr-accordion-item.open > .fr-accordion-header svg {
+        transform: rotate(180deg);
+      }
+      .fr-accordion-item.open > .fr-accordion-content {
+        max-height: 300vh;
+      }
     </style>
   </head>
   <body class="bg-gray-900 text-gray-300">
@@ -177,6 +192,40 @@
             </div>
           </div>
 
+          <div
+            id="financial-reports-container"
+            class="bg-gray-800 rounded-xl shadow-lg p-6"
+          >
+            <h2 class="text-lg font-semibold text-cyan-400 mb-4">
+              Latest Annual Reports
+            </h2>
+            <div
+              id="financial-reports-content"
+              class="space-y-4 max-h-[800px] custom-scrollbar overflow-y-auto pr-2"
+            >
+              <div class="text-center text-gray-500 p-8">
+                Loading annual reports...
+              </div>
+            </div>
+          </div>
+
+          <div
+            id="quarterly-results-container"
+            class="bg-gray-800 rounded-xl shadow-lg p-6"
+          >
+            <h2 class="text-lg font-semibold text-blue-400 mb-4">
+              Latest Quarterly Results
+            </h2>
+            <div
+              id="quarterly-results-content"
+              class="space-y-4 max-h-[800px] custom-scrollbar overflow-y-auto pr-2"
+            >
+              <div class="text-center text-gray-500 p-8">
+                Loading quarterly results...
+              </div>
+            </div>
+          </div>
+
           <div class="bg-gray-800 rounded-xl shadow-lg p-6">
             <div class="flex border-b border-gray-700 mb-4">
               <button
@@ -192,7 +241,6 @@
                 Closed Trades
               </button>
             </div>
-
             <div
               id="open-positions"
               class="tab-content active space-y-8 max-h-[600px] custom-scrollbar overflow-y-auto pr-2"
@@ -201,7 +249,6 @@
                 Loading live positions...
               </div>
             </div>
-
             <div id="closed-trades" class="tab-content">
               <div class="overflow-x-auto max-h-[600px] custom-scrollbar">
                 <table class="w-full text-sm text-left text-gray-400">
@@ -244,6 +291,20 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="lg:col-span-1 sticky top-28 space-y-8">
+          <div
+            id="corporate-actions-container"
+            class="bg-gray-800 rounded-xl shadow-lg p-6"
+          >
+            <h2 class="text-lg font-semibold text-teal-400 mb-4">
+              Corporate Actions
+            </h2>
+            <ul id="corporate-actions-feed" class="space-y-4">
+              <li class="text-center text-gray-500 py-4">Loading actions...</li>
+            </ul>
+          </div>
 
           <div
             id="nse-announcements-container"
@@ -266,68 +327,6 @@
                 class="max-h-[600px] custom-scrollbar overflow-y-auto pr-2"
               ></div>
             </div>
-          </div>
-        </div>
-
-        <div class="lg:col-span-1 sticky top-28">
-          <div class="bg-gray-800 rounded-xl shadow-lg p-6">
-            <h2 class="text-lg font-semibold text-teal-400 mb-4">
-              Active Strategies
-            </h2>
-            <ul class="space-y-4">
-              <li
-                class="flex items-center justify-between p-3 bg-gray-900/50 rounded-md"
-              >
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="status-dot status-dot-green"></span>
-                    <p class="font-semibold text-white">Golden Crossover</p>
-                  </div>
-                  <p class="text-xs text-gray-400 mt-1">
-                    Last Signal: INFY (2h ago)
-                  </p>
-                </div>
-                <button
-                  class="text-xs text-violet-400 hover:text-violet-300 font-semibold"
-                >
-                  VIEW
-                </button>
-              </li>
-              <li
-                class="flex items-center justify-between p-3 bg-gray-900/50 rounded-md"
-              >
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="status-dot status-dot-green"></span>
-                    <p class="font-semibold text-white">RSI Bounce</p>
-                  </div>
-                  <p class="text-xs text-gray-400 mt-1">
-                    Last Signal: WIPRO (Yesterday)
-                  </p>
-                </div>
-                <button
-                  class="text-xs text-violet-400 hover:text-violet-300 font-semibold"
-                >
-                  VIEW
-                </button>
-              </li>
-              <li
-                class="flex items-center justify-between p-3 bg-gray-900/50 rounded-md"
-              >
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="status-dot status-dot-green"></span>
-                    <p class="font-semibold text-white">Straddle King</p>
-                  </div>
-                  <p class="text-xs text-gray-400 mt-1">Scanning Options...</p>
-                </div>
-                <button
-                  class="text-xs text-violet-400 hover:text-violet-300 font-semibold"
-                >
-                  VIEW
-                </button>
-              </li>
-            </ul>
           </div>
         </div>
       </div>

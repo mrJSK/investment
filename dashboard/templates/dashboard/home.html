@@ -1,0 +1,502 @@
+{% comment %} This is the main "home" or "launchpad" template for the entire
+ScreenerX application suite. It now features a macOS-style dock instead of a
+sidebar for navigation. This template should be rendered by the HomeView in your
+dashboard/views.py file. {% endcomment %}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page_title|default:"ScreenerX - Financial Suite" }}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* --- Base Body & Scrollbar Styles --- */
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #0d1117; /* GitHub dark background */
+        color: #c9d1d9; /* GitHub dark text */
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0d1117;
+      }
+      ::-webkit-scrollbar-thumb {
+        background-color: #2c323b;
+        border-radius: 10px;
+        border: 2px solid #0d1117;
+      }
+
+      /* --- macOS Dock Styles --- */
+      .mac-dock {
+        /* Positioning */
+        position: fixed;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+
+        /* Layout */
+        display: flex;
+        align-items: flex-end; /* Aligns icons to the bottom of the container */
+        gap: 0.75rem; /* Space between icons */
+
+        /* Appearance */
+        padding: 0.75rem 1.25rem;
+        background: rgba(
+          30,
+          30,
+          40,
+          0.5
+        ); /* Semi-transparent dark background */
+        backdrop-filter: blur(12px); /* Frosted glass effect */
+        border-radius: 1.5rem; /* Rounded corners */
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+        /* Ensure it's above other content */
+        z-index: 50;
+      }
+
+      .dock-item {
+        position: relative;
+        width: 3.5rem; /* 56px */
+        height: 3.5rem; /* 56px */
+        color: #c9d1d9;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 1rem;
+        display: grid;
+        place-items: center;
+        transition: all 0.1s ease-out;
+      }
+
+      .dock-item svg {
+        /* --- CHANGED --- Increased icon size for more presence */
+        width: 2.25rem; /* 36px - Was 2rem */
+        height: 2.25rem; /* 36px - Was 2rem */
+      }
+
+      /* Tooltip Styles */
+      .dock-tooltip {
+        position: absolute;
+        bottom: 120%; /* --- CHANGED --- Increased distance from icon */
+        left: 50%;
+
+        background-color: #0d1117;
+        color: #fff;
+        padding: 0.4rem 0.8rem; /* --- CHANGED --- Adjusted padding */
+        border-radius: 0.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+
+        /* --- CHANGED --- Refined font for a more subtle look */
+        font-size: 0.75rem; /* 12px - Was 0.875rem */
+        font-weight: 500; /* Medium - Was 600 */
+        white-space: nowrap;
+
+        /* Hidden by default state */
+        opacity: 0;
+        pointer-events: none;
+
+        /* --- CHANGED --- Smoother animation with a slight upward movement */
+        transform: translate(-50%, 4px); /* Starts slightly lower */
+        transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+      }
+
+      /* Show tooltip on hover */
+      .dock-item:hover .dock-tooltip {
+        opacity: 1;
+        transform: translate(-50%, 0); /* Moves up to final position */
+      }
+    </style>
+  </head>
+  <body class="overflow-y-auto pb-32">
+    <main id="main-content" class="flex-1 p-10">
+      <header class="mb-12">
+        <h1 class="text-4xl font-extrabold text-white">
+          Welcome to the Financial Suite
+        </h1>
+        <p class="mt-2 text-lg text-gray-400">
+          Your central hub for market analysis, data, and machine learning.
+        </p>
+      </header>
+
+      <div
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8"
+      >
+        <div
+          class="bg-[#161b22] p-8 rounded-2xl border border-gray-800 flex flex-col hover:border-indigo-500/50 transition-all duration-300 transform hover:-translate-y-1"
+        >
+          <div class="flex-shrink-0 mb-6">
+            <div
+              class="h-12 w-12 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg"
+            >
+              <svg
+                class="h-6 w-6 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"
+                />
+              </svg>
+            </div>
+          </div>
+          <div class="flex-grow">
+            <h3 class="text-xl font-bold text-white mb-2">
+              Real-Time Dashboard
+            </h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              View real-time market news, sentiment analysis, and corporate
+              announcements scraped from NSE feeds and top financial news sites.
+            </p>
+          </div>
+          <a
+            href="{% url 'dashboard:main_dashboard' %}"
+            class="mt-6 inline-block text-sm font-semibold text-indigo-400 hover:text-indigo-300"
+            >Launch Dashboard &rarr;</a
+          >
+        </div>
+        <div
+          class="bg-[#161b22] p-8 rounded-2xl border border-gray-800 flex flex-col hover:border-indigo-500/50 transition-all duration-300 transform hover:-translate-y-1"
+        >
+          <div class="flex-shrink-0 mb-6">
+            <div
+              class="h-12 w-12 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg"
+            >
+              <svg
+                class="h-6 w-6 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"
+                />
+                <rect width="4" height="12" x="2" y="9" />
+                <circle cx="4" cy="4" r="2" />
+              </svg>
+            </div>
+          </div>
+          <div class="flex-grow">
+            <h3 class="text-xl font-bold text-white mb-2">
+              Company Fundamentals
+            </h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Perform a deep-dive analysis into any company's financial health,
+              key ratios, performance metrics, and peer comparisons.
+            </p>
+          </div>
+          <a
+            href="{% url 'fundamentals:fundamentals_page' %}"
+            class="mt-6 inline-block text-sm font-semibold text-indigo-400 hover:text-indigo-300"
+            >Browse Companies &rarr;</a
+          >
+        </div>
+        <div
+          class="bg-[#161b22] p-8 rounded-2xl border border-gray-800 flex flex-col hover:border-indigo-500/50 transition-all duration-300 transform hover:-translate-y-1"
+        >
+          <div class="flex-shrink-0 mb-6">
+            <div
+              class="h-12 w-12 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg"
+            >
+              <svg
+                class="h-6 w-6 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 6h18" />
+                <path d="M7 12h10" />
+                <path d="M10 18h4" />
+              </svg>
+            </div>
+          </div>
+          <div class="flex-grow">
+            <h3 class="text-xl font-bold text-white mb-2">
+              Screener & Backtester
+            </h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Build and backtest complex trading strategies using a custom query
+              language with multi-timeframe technical indicators.
+            </p>
+          </div>
+          <a
+            href="{% url 'screener:dashboard' %}"
+            class="mt-6 inline-block text-sm font-semibold text-indigo-400 hover:text-indigo-300"
+            >Open Screener &rarr;</a
+          >
+        </div>
+        <div
+          class="bg-[#161b22] p-8 rounded-2xl border border-gray-800 flex flex-col hover:border-indigo-500/50 transition-all duration-300 transform hover:-translate-y-1"
+        >
+          <div class="flex-shrink-0 mb-6">
+            <div
+              class="h-12 w-12 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg"
+            >
+              <svg
+                class="h-6 w-6 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+                />
+                <polyline points="14 2 14 8 20 8" />
+                <path d="m10 14-2 2 2 2" />
+                <path d="m14 18 2-2-2-2" />
+              </svg>
+            </div>
+          </div>
+          <div class="flex-grow">
+            <h3 class="text-xl font-bold text-white mb-2">ML Model Trainer</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Interactively train, evaluate, and visualize various machine
+              learning models (XGBoost, etc.) on your financial time-series
+              data.
+            </p>
+          </div>
+          <a
+            href="{% url 'ml:ml_dashboard' %}"
+            class="mt-6 inline-block text-sm font-semibold text-indigo-400 hover:text-indigo-300"
+            >Start Training &rarr;</a
+          >
+        </div>
+        <div
+          class="bg-[#161b22] p-8 rounded-2xl border border-gray-800 flex flex-col hover:border-indigo-500/50 transition-all duration-300 transform hover:-translate-y-1"
+        >
+          <div class="flex-shrink-0 mb-6">
+            <div
+              class="h-12 w-12 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg"
+            >
+              <svg
+                class="h-6 w-6 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" x2="12" y1="15" y2="3" />
+              </svg>
+            </div>
+          </div>
+          <div class="flex-grow">
+            <h3 class="text-xl font-bold text-white mb-2">Data Management</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Backend command-line tools for fetching historical OHLCV data and
+              streaming live ticks from the Fyers API.
+            </p>
+          </div>
+          <a
+            href="#"
+            class="mt-6 inline-block text-sm font-semibold text-gray-500 cursor-not-allowed"
+            title="Run commands from your terminal"
+            >View Commands &rarr;</a
+          >
+        </div>
+      </div>
+    </main>
+
+    <nav id="mac-dock" class="mac-dock">
+      <a href="{% url 'dashboard:home' %}" class="dock-item">
+        <span class="dock-tooltip">Home</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect width="7" height="7" x="3" y="3" rx="1" />
+          <rect width="7" height="7" x="14" y="3" rx="1" />
+          <rect width="7" height="7" x="14" y="14" rx="1" />
+          <rect width="7" height="7" x="3" y="14" rx="1" />
+        </svg>
+      </a>
+      <a href="{% url 'dashboard:main_dashboard' %}" class="dock-item">
+        <span class="dock-tooltip">Live Dashboard</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"
+          />
+          <path d="M18 14h-8" />
+          <path d="M18 18h-8" />
+          <path d="M10 6h8" />
+          <path d="M10 10h8" />
+        </svg>
+      </a>
+      <a href="{% url 'fundamentals:fundamentals_page' %}" class="dock-item">
+        <span class="dock-tooltip">Fundamentals</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"
+          />
+          <rect width="4" height="12" x="2" y="9" />
+          <circle cx="4" cy="4" r="2" />
+        </svg>
+      </a>
+      <a href="{% url 'screener:dashboard' %}" class="dock-item">
+        <span class="dock-tooltip">Screener</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M3 6h18" />
+          <path d="M7 12h10" />
+          <path d="M10 18h4" />
+        </svg>
+      </a>
+      <a href="{% url 'ml:ml_dashboard' %}" class="dock-item">
+        <span class="dock-tooltip">ML Trainer</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+          />
+          <polyline points="14 2 14 8 20 8" />
+          <path d="m10 14-2 2 2 2" />
+          <path d="m14 18 2-2-2-2" />
+        </svg>
+      </a>
+      <a href="{% url 'fyers_logout' %}" class="dock-item">
+        <span class="dock-tooltip">Logout</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" x2="9" y1="12" y2="12" />
+        </svg>
+      </a>
+    </nav>
+
+    <script>
+      const dock = document.getElementById("mac-dock");
+      if (dock) {
+        const dockItems = Array.from(dock.getElementsByClassName("dock-item"));
+
+        const maxScale = 1.75;
+        const maxDistance = 150;
+
+        function handleMouseMove(e) {
+          const mouseX = e.clientX;
+
+          dockItems.forEach((item) => {
+            const itemRect = item.getBoundingClientRect();
+            const itemCenterX = itemRect.left + itemRect.width / 2;
+            const distance = Math.abs(mouseX - itemCenterX);
+
+            if (distance > maxDistance) {
+              item.style.transform = "scale(1)";
+              return;
+            }
+
+            const scale = maxScale - (distance / maxDistance) * (maxScale - 1);
+            item.style.transform = `scale(${scale}) translateY(${
+              (scale - 1) * -20
+            }px)`;
+          });
+        }
+
+        function handleMouseLeave() {
+          dockItems.forEach((item) => {
+            item.style.transform = "scale(1) translateY(0px)";
+          });
+        }
+
+        dock.addEventListener("mousemove", handleMouseMove);
+        dock.addEventListener("mouseleave", handleMouseLeave);
+      }
+    </script>
+  </body>
+</html>
