@@ -6,7 +6,7 @@ import json
 from django.core.management.base import BaseCommand
 # This is the updated import as per the V3 documentation style
 from fyers_apiv3.FyersWebsocket import data_ws
-from fundamentals.models import FundamentalsCompany
+from fundamentals.models import Company
 
 
 # --- Helper Functions for Credentials (Unchanged) ---
@@ -88,7 +88,7 @@ class Command(BaseCommand):
     
     def get_symbols_from_django_orm(self):
         """Fetches the list of symbols using the Django ORM."""
-        symbols_from_db = FundamentalsCompany.objects.values_list('symbol', flat=True)
+        symbols_from_db = Company.objects.values_list('symbol', flat=True)
         formatted_symbols = [f"NSE:{symbol}-EQ" for symbol in symbols_from_db]
         self.stdout.write(f"Fetched {len(formatted_symbols)} symbols from the database.")
         return formatted_symbols

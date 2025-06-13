@@ -21,6 +21,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const quarterlyResultsContainer = document.getElementById(
     "quarterly-results-content"
   );
+  // --- Reference for the corporate actions container ---
+  const corporateActionsContainer = document.getElementById(
+    "corporate-actions-feed"
+  );
+
   const totalInvestmentEl = document.getElementById("total-investment");
   const currentValueEl = document.getElementById("current-value");
   const pnlValueEl = document.getElementById("pnl-value");
@@ -116,7 +121,51 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  // --- THIS IS THE MISSING FUNCTION ---
+  async function fetchCorporateActions() {
+    try {
+      const response = await fetch("/dashboard/api/corporate-actions/");
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      renderCorporateActions(data.corporate_actions);
+    } catch (error) {
+      console.error("Failed to fetch corporate actions:", error);
+      if (corporateActionsContainer)
+        corporateActionsContainer.innerHTML = `<li class="text-center text-red-400 py-4">Could not load corporate actions.</li>`;
+    }
+  }
+
   // --- Rendering Functions ---
+
+  // --- THIS IS THE MISSING RENDERING FUNCTION ---
+  function renderCorporateActions(actions) {
+    if (!corporateActionsContainer) return;
+    if (!actions || actions.length === 0) {
+      corporateActionsContainer.innerHTML = `<li class="text-center text-gray-500 py-4">No recent corporate actions.</li>`;
+      return;
+    }
+    corporateActionsContainer.innerHTML = actions
+      .map((action) => {
+        const categoryColor =
+          action.category === "Financial"
+            ? "bg-sky-500/10 text-sky-300"
+            : "bg-amber-500/10 text-amber-300";
+        return `
+            <li class="border-l-4 border-gray-700 pl-4 py-2 hover:bg-gray-700/40 rounded-r-md">
+                <div class="flex justify-between items-start">
+                    <p class="font-semibold text-sm text-white">${action.company_name}</p>
+                    <span class="text-xs font-medium ${categoryColor} px-2 py-1 rounded">${action.category}</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">${action.action_type}</p>
+                <a href="${action.link}" target="_blank" rel="noopener noreferrer" class="text-xs text-violet-400 hover:text-violet-300 transition-colors">
+                    View Announcement &rarr;
+                </a>
+            </li>
+        `;
+      })
+      .join("");
+  }
 
   function renderFinancialReports(reports, type) {
     const container =
@@ -157,11 +206,15 @@ document.addEventListener("DOMContentLoaded", function () {
       .join("");
   }
 
+  // ... (All other rendering functions from your file go here) ...
+  // This includes renderFinancialStatements, renderFinancialTableRows, renderStocksInFocusTable,
+  // renderRegularNews, renderNseAnnouncements, renderPortfolioSummary, renderOpenPositions,
+  // renderSparklines, and renderClosedTrades. They are unchanged.
+
   function renderFinancialStatements(reportData, type, reportIndex) {
     const statements = reportData.statements;
     if (!statements)
       return '<p class="text-gray-500 text-sm p-4">No detailed statements available.</p>';
-
     const statementHierarchy = {
       "Statement of Profit and Loss": [
         "RevenueFromOperations",
@@ -179,14 +232,12 @@ document.addEventListener("DOMContentLoaded", function () {
         "InterestServiceCoverageRatio",
       ],
     };
-
     return Object.entries(statementHierarchy)
       .map(([statementName, concepts]) => {
         const availableConcepts = concepts
           .map((c) => statements[c])
           .filter(Boolean);
         if (availableConcepts.length === 0) return "";
-
         const headers = [
           ...new Set(
             availableConcepts.flatMap((fact) =>
@@ -194,9 +245,7 @@ document.addEventListener("DOMContentLoaded", function () {
             )
           ),
         ];
-
-        return `
-              <div class="fr-accordion-item bg-gray-900/50 rounded-md border border-gray-700/50" id="${type}-statement-item-${reportIndex}-${statementName.replace(
+        return `<div class="fr-accordion-item bg-gray-900/50 rounded-md border border-gray-700/50" id="${type}-statement-item-${reportIndex}-${statementName.replace(
           /\s+/g,
           ""
         )}">
@@ -230,8 +279,7 @@ document.addEventListener("DOMContentLoaded", function () {
                           </table>
                       </div>
                   </div>
-              </div>
-          `;
+              </div>`;
       })
       .join("");
   }
@@ -240,11 +288,10 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!fact.main || fact.main.length === 0) return "";
     const conceptName = fact.main[0].concept.replace(/([A-Z])/g, " $1").trim();
     const valuesByPeriod = fact.main.reduce((acc, v) => {
-      const scalingFactor = v.decimals < 0 ? 100000 : 1; // Handle Lakhs
+      const scalingFactor = v.decimals < 0 ? 100000 : 1;
       acc[v.context.period_label] = v.value * scalingFactor;
       return acc;
     }, {});
-
     let rowHtml = `<tr class="hover:bg-gray-900/20"><td class="p-2 font-medium text-gray-300">${conceptName}</td>
                    ${headers
                      .map(
@@ -256,7 +303,6 @@ document.addEventListener("DOMContentLoaded", function () {
                          }</td>`
                      )
                      .join("")}</tr>`;
-
     if (fact.details && fact.details.length > 0) {
       const detailsByDesc = fact.details.reduce((acc, d) => {
         if (!acc[d.description]) acc[d.description] = {};
@@ -280,8 +326,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     return rowHtml;
   }
-
-  // ... (All other rendering functions: renderStocksInFocusTable, renderRegularNews, etc. remain here unchanged)
 
   function renderStocksInFocusTable(watchListData) {
     if (!stocksInFocusBody) return;
@@ -609,6 +653,8 @@ document.addEventListener("DOMContentLoaded", function () {
     fetchAnnouncementsData();
     fetchAnnualReportsData();
     fetchQuarterlyResultsData();
+    // --- THIS IS THE MISSING CALL ---
+    fetchCorporateActions();
 
     // Refresh only the fast-moving trading data periodically
     setInterval(fetchTradingData, 30000); // Poll trading data every 30 seconds

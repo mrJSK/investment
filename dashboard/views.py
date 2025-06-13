@@ -10,19 +10,9 @@ import random
 class DashboardView(TemplateView):
     """
     Renders the main HTML template for the dashboard.
+    This view is protected and requires login.
     """
     template_name = 'dashboard/dashboard.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = 'Trading Dashboard'
-        return context
-    
-class HomeView(TemplateView):
-    """
-    Renders the main Home/Launchpad page for the entire suite.
-    """
-    template_name = 'dashboard/home.html'
 
     def dispatch(self, request, *args, **kwargs):
         """
@@ -39,12 +29,24 @@ class HomeView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Trading Dashboard'
+        return context
+    
+class HomeView(TemplateView):
+    """
+    Renders the main Home/Launchpad page for the entire suite.
+    This view is no longer protected.
+    """
+    template_name = 'dashboard/home.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         context['page_title'] = 'ScreenerX'
         return context
 
 # --- API VIEWS ---
 
-def trading_data_api(request):
+async def trading_data_api(request):
     """
     API endpoint ONLY for fast-loading mock trading data. This will respond instantly.
     """
@@ -66,48 +68,48 @@ def trading_data_api(request):
         "closed_trades": mock_closed_trades,
     })
 
-def market_news_api(request):
-    """
-    API endpoint for market news. Calls the database-driven service function.
-    This might be slow as it involves scraping, but it won't block other parts of the UI.
-    """
+async def market_news_api(request):
+    """ ASYNC: API endpoint for market news. """
     try:
-        market_news = services.get_and_update_market_news()
+        market_news = await services.get_and_update_market_news()
     except Exception as e:
         print(f"API Error fetching news in market_news_api: {e}")
         market_news = {"regular": [], "watch_list": []}
     return JsonResponse(market_news)
 
-def nse_announcements_api(request):
-    """
-    API endpoint for corporate announcements.
-    """
+async def nse_announcements_api(request):
+    """ ASYNC: API endpoint for corporate announcements. """
     try:
-        nse_announcements = services.get_cached_or_fresh_announcements()
+        # Assuming a get_cached_or_fresh_announcements exists and is async
+        nse_announcements = await services.get_cached_or_fresh_announcements()
     except Exception as e:
         print(f"API Error fetching NSE announcements in nse_announcements_api: {e}")
         nse_announcements = {}
     return JsonResponse(nse_announcements)
 
-def financial_reports_api(request):
-    """
-    API endpoint for fetching processed ANNUAL financial reports from the database.
-    """
+async def financial_reports_api(request):
+    """ ASYNC: API endpoint for fetching processed ANNUAL financial reports. """
     try:
-        financial_reports = services.get_cached_or_fresh_financial_reports()
+        financial_reports = await services.get_cached_or_fresh_financial_reports()
     except Exception as e:
-        print(f"API Error fetching Annual Financial Reports in financial_reports_api: {e}")
+        print(f"API Error fetching Annual Financial Reports: {e}")
         financial_reports = []
     return JsonResponse({"financial_reports": financial_reports})
 
-def quarterly_financials_api(request):
-    """
-    API endpoint for fetching processed QUARTERLY financial reports from the database.
-    """
+async def quarterly_financials_api(request):
+    """ ASYNC: API endpoint for fetching processed QUARTERLY financial reports. """
     try:
-        quarterly_reports = services.get_latest_quarterly_reports()
+        quarterly_reports = await services.get_latest_quarterly_reports()
     except Exception as e:
-        print(f"API Error fetching Quarterly Financials in quarterly_financials_api: {e}")
+        print(f"API Error fetching Quarterly Financials: {e}")
         quarterly_reports = []
     return JsonResponse({"quarterly_reports": quarterly_reports})
 
+async def corporate_actions_api(request):
+    """ ASYNC: API endpoint for fetching the latest corporate actions. """
+    try:
+        corporate_actions = await services.get_latest_corporate_actions()
+    except Exception as e:
+        print(f"API Error fetching Corporate Actions: {e}")
+        corporate_actions = []
+    return JsonResponse({"corporate_actions": corporate_actions})

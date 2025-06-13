@@ -49,5 +49,5 @@ urlpatterns = [
 
     # FIX: The dashboard app now exclusively handles the root URL ('')
     # and its own prefixed URLs ('/dashboard/').
-    path('', include('dashboard.urls')),
+    path('dashboard/', include('dashboard.urls'))
 ]
