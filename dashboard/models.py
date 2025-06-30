@@ -1,3 +1,5 @@
+# dashboard/models.py
+
 from django.db import models
 import uuid
 
@@ -106,7 +108,8 @@ class QuarterlyFinancials(models.Model):
         return f"{self.company_name} ({self.symbol}) - Qtr ending {self.period_end_date}"
 
     class Meta:
-        ordering = ['-period_end_date', 'company_name']
+        # Changed ordering to support DISTINCT ON company_name
+        ordering = ['company_name', '-period_end_date'] # Changed line
         verbose_name_plural = "Quarterly Financials"
 
 class CorporateAction(models.Model):
@@ -134,4 +137,3 @@ class CorporateAction(models.Model):
         verbose_name = "Corporate Action"
         verbose_name_plural = "Corporate Actions"
         unique_together = ('link', 'subject')
-

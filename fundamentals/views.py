@@ -85,7 +85,6 @@ class FundamentalsView(TemplateView):
         context['page_title'] = 'Fundamental Analysis'
         return context
 
-# API for the main sidebar's company list (flat list)
 def company_list_api(request):
     try:
         companies = Company.objects.all().order_by('name').values('symbol', 'name')

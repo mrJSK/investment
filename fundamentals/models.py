@@ -55,6 +55,7 @@
 
 # fundamentals/models.py
 
+import uuid
 from django.db import models
 
 class IndustryClassification(models.Model):
@@ -140,3 +141,47 @@ class Company(models.Model):
     class Meta:
         verbose_name_plural = "Companies"
         ordering = ['name']
+
+class FundamentalData(models.Model):
+    """
+    Stores key dynamic/daily fundamental metrics for a company.
+    Linked by a ForeignKey to the Company model.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey(
+        Company, 
+        on_delete=models.CASCADE, 
+        related_name='daily_fundamental_data' # <--- THIS IS THE CRITICAL CHANGE
+    )
+    date = models.DateField(db_index=True) # Date the data was recorded/scraped
+
+    # Key daily/frequently updated ratios
+    market_cap = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    current_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    high_52_week = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    low_52_week = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    stock_pe = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    book_value = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    dividend_yield = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    roc = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True) # Return on Capital Employed
+    roe = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True) # Return on Equity
+    sales_growth_3_years = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    profit_growth_3_years = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    debt_to_equity = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    cash_conversion_cycle = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    
+    # Store raw data fetched from scraper, might contain other fields not explicitly modeled
+    raw_data = models.JSONField(null=True, blank=True, help_text="Raw JSON data of daily scrape")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('company', 'date')
+        # Order by company, then latest date first to easily retrieve latest fundamental data
+        ordering = ['company', '-date'] 
+        verbose_name_plural = "Fundamental Data"
+
+    def __str__(self):
+        return f"{self.company.symbol} - {self.date} Fundamentals"
+

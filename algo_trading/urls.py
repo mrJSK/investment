@@ -41,6 +41,7 @@ urlpatterns = [
     
     # FIX: Moved login app to its own '/login/' path to avoid conflict with the root URL.
     path('login/', include('login.urls')), 
+    path("", include("login.urls")),  # Add this line
     
     # App-specific URLs
     path('screener/', include('screener.urls')),

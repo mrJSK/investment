@@ -694,8 +694,28 @@ from .models import CorporateAction, FinancialReport, NewsArticle, StockInFocus,
 def db_get_news():
     regular_news_qs = NewsArticle.objects.filter(is_stocks_to_watch=False).order_by('-updated_at')[:10]
     watch_list_qs = StockInFocus.objects.select_related('article').order_by('-created_at')[:20]
-    regular_news = [{"headline": a.headline, "link": a.link, "full_text": a.full_text} for a in regular_news_qs]
-    watch_list = [{"stock_name": i.stock_name, "text": i.text} for i in watch_list_qs]
+
+    # CORRECTED LINE: Include sentiment, confidence, and action
+    regular_news = [{
+        "headline": a.headline,
+        "link": a.link,
+        "full_text": a.full_text,
+        "sentiment": a.sentiment,       # Add this line
+        "confidence": a.confidence,     # Add this line
+        "action": a.action,             # Add this line
+        "publication_time": a.publication_time_str, # This was also present in old code
+        "scraped_at": a.updated_at.isoformat() # This was also present in old code
+    } for a in regular_news_qs]
+
+    # Also, ensure 'sentiment', 'confidence', 'action' are in watch_list if needed by frontend
+    watch_list = [{
+        "stock_name": i.stock_name,
+        "text": i.text,
+        "sentiment": i.sentiment,       # Add this line
+        "confidence": i.confidence,     # Add this line
+        "action": i.action              # Add this line
+    } for i in watch_list_qs]
+
     return {"regular": regular_news, "watch_list": watch_list}
 
 @sync_to_async
