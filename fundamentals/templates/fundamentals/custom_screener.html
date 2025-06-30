@@ -1,0 +1,326 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page_title }}</title>
+
+    {# Tailwind CSS CDN #}
+    <script src="https://cdn.tailwindcss.com"></script>
+    {# Font Awesome for icons #}
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    {# Google Fonts - Inter #}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* Base Styles - Aligned with dashboard.html and home.html */
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #111827; /* Darkest background */
+        color: #d1d5db; /* Light text color */
+        padding: 2rem; /* Add padding to body */
+      }
+      /* Custom scrollbar */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #1f2937;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #4b5563;
+        border-radius: 10px;
+        border: 3px solid #1f2937;
+      }
+      body::-webkit-scrollbar {
+        display: none;
+      }
+      body {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      /* General Typography */
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: #e0e0f0;
+      }
+      a {
+        color: #2dd4bf;
+        transition: color 0.2s ease;
+      }
+      a:hover {
+        color: #06b6d4;
+      }
+
+      /* Filter Section Styling */
+      .filter-section {
+        background-color: #1f2937; /* gray-800 */
+        border-radius: 1rem; /* rounded-2xl */
+        padding: 2rem; /* p-8 */
+        box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.4);
+        margin-bottom: 2.5rem;
+        border: 1px solid #374151; /* gray-700 */
+      }
+      .filter-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+        align-items: center;
+      }
+      .filter-group label {
+        min-width: 140px;
+        font-weight: 500;
+        color: #9ca3af;
+      }
+      .filter-group input[type="number"],
+      .filter-group select {
+        background-color: #374151; /* gray-700 */
+        color: #e0e0f0;
+        border: 1px solid #4b5563; /* gray-600 */
+        border-radius: 0.5rem;
+        padding: 0.625rem 1rem;
+        width: 180px;
+        outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+      .filter-group input[type="number"]:focus,
+      .filter-group select:focus {
+        border-color: #2dd4bf;
+        box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.3);
+      }
+      .filter-group input::placeholder {
+        color: #6b7280;
+      }
+
+      /* Buttons */
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        transition: all 0.2s ease-in-out;
+        cursor: pointer;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      .btn-primary {
+        background-color: #10b981; /* emerald-500 */
+        color: white;
+      }
+      .btn-primary:hover {
+        background-color: #059669; /* emerald-600 */
+        transform: translateY(-2px);
+      }
+      .btn-secondary {
+        background-color: #ef4444; /* red-500 */
+        color: white;
+      }
+      .btn-secondary:hover {
+        background-color: #dc2626; /* red-600 */
+        transform: translateY(-2px);
+      }
+
+      /* Table Styling */
+      .table-container {
+        background-color: #1f2937;
+        border-radius: 1rem;
+        box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.4);
+        overflow: hidden;
+        border: 1px solid #374151;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85em;
+        color: #d1d5db;
+      }
+      .table-header-cell {
+        background-color: #111827;
+        color: #9ca3af;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        padding: 14px 16px;
+      }
+      .table-header-cell:hover {
+        background-color: #1f2937;
+      }
+      .table-body-row:nth-child(odd) {
+        background-color: #1a2434;
+      }
+      .table-body-row:nth-child(even) {
+        background-color: #1f2937;
+      }
+      .table-body-row:hover {
+        background-color: #334151;
+        color: #e0e0f0;
+      }
+      .table-body-cell {
+        padding: 14px 16px;
+        font-size: 0.9em;
+      }
+
+      /* Loading Indicator */
+      .loading {
+        color: #9ca3af;
+        font-size: 1.2em;
+        text-align: center;
+        padding: 2rem;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="p-8">
+      <h1 class="text-4xl font-extrabold mb-8 text-teal-400">
+        {{ page_title }}
+      </h1>
+
+      <div class="filter-section">
+        <h3 class="text-2xl font-semibold mb-6 text-green-300">
+          Custom Filter Criteria:
+        </h3>
+        <div class="filter-group">
+          <label for="min_roce">Min ROCE (%):</label>
+          <input type="number" id="min_roce" placeholder="e.g., 15" />
+
+          <label for="min_roe">Min ROE (%):</label>
+          <input type="number" id="min_roe" placeholder="e.g., 15" />
+
+          <label for="min_profit_growth_5yr">Min 5Y Profit Growth (%):</label>
+          <input
+            type="number"
+            id="min_profit_growth_5yr"
+            placeholder="e.g., 10"
+          />
+        </div>
+        <div class="filter-group">
+          <label for="max_pe">Max P/E:</label>
+          <input type="number" id="max_pe" placeholder="e.g., 20" />
+
+          <label for="max_pb">Max P/B:</label>
+          <input type="number" id="max_pb" placeholder="e.g., 3" />
+        </div>
+        <div class="filter-group">
+          <label for="industry_filter">Industry:</label>
+          <select id="industry_filter" class="w-auto">
+            <option value="">All Industries</option>
+            {% for industry in industries %}
+            <option value="{{ industry.id }}">{{ industry.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mt-8 flex gap-4">
+          <button id="apply_filters" class="btn btn-primary">
+            Apply Filters
+          </button>
+          <button id="clear_filters" class="btn btn-secondary">
+            Clear Filters
+          </button>
+        </div>
+      </div>
+
+      <div class="loading" id="screener_loading_indicator">
+        <i class="fas fa-spinner fa-spin text-4xl mb-4"></i>
+        <p>Loading companies...</p>
+      </div>
+
+      <div class="table-container">
+        <table id="screener_companies_table">
+          <thead>
+            <tr>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="name"
+              >
+                Company Name
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="symbol"
+              >
+                Symbol
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="market_cap"
+              >
+                Mar Cap (Cr.)
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="current_price"
+              >
+                CMP
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="stock_pe"
+              >
+                P/E
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="book_value"
+              >
+                Book Value
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="price_to_book"
+              >
+                P/B
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="dividend_yield"
+              >
+                Div. Yld (%)
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="roce"
+              >
+                ROCE (%)
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="roe"
+              >
+                ROE (%)
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="compounded_profit_growth_5yr"
+              >
+                5Y Pft Gr (%)
+              </th>
+              <th class="px-6 py-3 text-left table-header-cell">Industry</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{% static 'fundamentals/js/custom_screener.js' %}"></script>
+  </body>
+</html>

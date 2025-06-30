@@ -2,10 +2,11 @@
 
 from django.views.generic import TemplateView
 from django.http import JsonResponse
-from .models import Company
+from .models import Company, IndustryClassification
 import logging
 import json
-import requests # Used to make API calls
+import decimal
+from django.db.models import Q, F
 
 logger = logging.getLogger(__name__)
 
@@ -15,75 +16,42 @@ def to_float(value):
         return None
     try:
         return float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, decimal.InvalidOperation):
         return None
 
-def generate_analysis_with_ai(company_data):
-    """
-    Generates Pros and Cons from a local deepseek model using the /api/generate endpoint.
-    On failure, it returns (None, None) to signal that a fallback is needed.
-    """
-    local_api_url = "http://localhost:11434/api/generate"
-    full_dataset_json = json.dumps(company_data, indent=2)
-
-    prompt = f"""
-    You are an expert financial analyst. Your task is to perform a deep-dive analysis on the following company based on its complete financial dataset, presented in JSON format.
-
-    **Complete Company Dataset:**
-    ```json
-    {full_dataset_json}
-    ```
-
-    **Instructions:**
-    1.  Thoroughly analyze all provided data points.
-    2.  Synthesize the most critical strengths (Pros) and weaknesses/risks (Cons).
-    3.  Generate 3-5 key pros and 3-5 key cons. Each pro and con should be a string.
-    4.  Return your final analysis ONLY in a valid JSON format with two keys: "pros" and "cons".
-        Example: {{"pros": ["Good growth", "Low debt"], "cons": ["High P/E", "Low promoter holding"]}}
-    """
-    
-    payload = {
-        "model": "deepseek-coder:6.7b-instruct",
-        "prompt": prompt, "stream": False, "format": "json" 
-    }
-
-    try:
-        response = requests.post(local_api_url, json=payload, timeout=90)
-        response.raise_for_status() 
-
-        response_data = response.json()
-        analysis_content_string = response_data.get('response')
-
-        if not analysis_content_string:
-            logger.error(f"AI response for {company_data.get('symbol')} was empty.")
-            return None, None
-
-        analysis = json.loads(analysis_content_string)
-        
-        if isinstance(analysis, dict) and 'pros' in analysis and 'cons' in analysis:
-            logger.info(f"Successfully generated and parsed AI analysis for {company_data.get('symbol')}.")
-            return analysis['pros'], analysis['cons']
-        else:
-            logger.warning(f"AI response for {company_data.get('symbol')} had an invalid JSON structure: {analysis_content_string}")
-            return None, None
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Could not connect to local AI model at {local_api_url}: {e}")
-        return None, None
-    except json.JSONDecodeError as e:
-        logger.error(f"Error parsing JSON from AI response for {company_data.get('symbol')}: {e}\nRaw response: {analysis_content_string}")
-        return None, None
-    except (KeyError, IndexError) as e:
-        logger.error(f"Error processing AI response structure for {company_data.get('symbol')}: {e}")
-        return None, None
+# Helper function to safely get value from JSONField, handling potential errors
+def get_json_value(json_field, key):
+    if json_field and isinstance(json_field, dict):
+        value_str = json_field.get(key)
+        if value_str is not None: # Check if key exists (even if value is empty string)
+            value_str = value_str.replace('%', '').strip()
+            if value_str == '': # Handle explicit empty string case
+                return None # Treat empty string as None
+            try:
+                return decimal.Decimal(value_str)
+            except (decimal.InvalidOperation, TypeError, ValueError):
+                logger.warning(f"Could not convert JSON value '{value_str}' for key '{key}' to Decimal.")
+                return None
+    return None
 
 class FundamentalsView(TemplateView):
     template_name = 'fundamentals/fundamentals.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['page_title'] = 'Fundamental Analysis'
+        context['page_title'] = 'Fundamental Analysis Dashboard'
+        context['industries'] = IndustryClassification.objects.all().order_by('name')
         return context
+
+class CustomScreenerView(TemplateView):
+    template_name = 'fundamentals/custom_screener.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Advanced Company Screener'
+        context['industries'] = IndustryClassification.objects.all().order_by('name')
+        return context
+
 
 def company_list_api(request):
     try:
@@ -93,7 +61,6 @@ def company_list_api(request):
         logger.error(f"Error in company_list_api: {e}")
         return JsonResponse({'error': 'Could not retrieve company list.'}, status=500)
 
-# API endpoint to provide categorized data for the new market cap tab
 def market_cap_api(request):
     """
     Categorizes all companies into large, mid, and small cap.
@@ -106,7 +73,7 @@ def market_cap_api(request):
         large_caps, mid_caps, small_caps = [], [], []
 
         for company in companies:
-            market_cap = company.market_cap if company.market_cap is not None else 0
+            market_cap = company.market_cap if company.market_cap is not None else decimal.Decimal(0)
             company_data = {'symbol': company.symbol, 'name': company.name, 'market_cap': to_float(market_cap)}
 
             if market_cap > large_cap_threshold:
@@ -155,18 +122,10 @@ def company_detail_api(request, symbol):
             'compounded_profit_growth': company.compounded_profit_growth,
             'stock_price_cagr': company.stock_price_cagr, 'return_on_equity': company.return_on_equity,
             'shareholding_pattern': company.shareholding_pattern,
+            'pros': company.pros or [],
+            'cons': company.cons or []
         }
         
-        generated_pros, generated_cons = generate_analysis_with_ai(data)
-        
-        if generated_pros is not None and generated_cons is not None:
-            data['pros'], data['cons'] = generated_pros, generated_cons
-            company.pros, company.cons = generated_pros, generated_cons
-            company.save(update_fields=['pros', 'cons'])
-        else:
-            data['pros'] = company.pros or []
-            data['cons'] = company.cons or []
-
         return JsonResponse(data)
 
     except Company.DoesNotExist:
@@ -174,3 +133,218 @@ def company_detail_api(request, symbol):
     except Exception as e:
         logger.error(f"An unexpected error occurred for symbol {symbol}: {e}")
         return JsonResponse({'error': 'An internal server error occurred.'}, status=500)
+
+
+def strong_companies_market_cap_api(request):
+    """
+    Returns a list of fundamentally strong companies, categorized by market cap.
+    Applies default strong/undervalued filters.
+    """
+    filters = Q()
+
+    filters &= Q(roce__gte=decimal.Decimal(15))
+    filters &= Q(roe__gte=decimal.Decimal(15))
+    filters &= Q(stock_pe__lte=decimal.Decimal(20))
+    filters &= Q(market_cap__isnull=False)
+
+    companies_queryset = Company.objects.filter(filters).order_by('name')
+
+    strong_companies_categorized = []
+    large_cap_threshold = decimal.Decimal(100000)
+    mid_cap_threshold = decimal.Decimal(10000)
+
+    for company in companies_queryset:
+        price_to_book = None
+        if company.current_price is not None and company.book_value is not None and company.book_value != 0:
+            try:
+                price_to_book = company.current_price / company.book_value
+            except decimal.InvalidOperation:
+                pass
+        
+        if price_to_book is None or price_to_book > decimal.Decimal(3):
+            continue
+
+        profit_growth_5yr_val = get_json_value(company.compounded_profit_growth, '5 Years')
+        if profit_growth_5yr_val is None or profit_growth_5yr_val < decimal.Decimal(10):
+            continue
+
+        market_cap_category = "Small Cap"
+        if company.market_cap >= large_cap_threshold:
+            market_cap_category = "Large Cap"
+        elif company.market_cap >= mid_cap_threshold:
+            market_cap_category = "Mid Cap"
+
+        strong_companies_categorized.append({
+            'name': company.name,
+            'symbol': company.symbol,
+            'market_cap': to_float(company.market_cap),
+            'current_price': to_float(company.current_price),
+            'stock_pe': to_float(company.stock_pe),
+            'book_value': to_float(company.book_value),
+            'price_to_book': to_float(price_to_book),
+            'dividend_yield': to_float(company.dividend_yield),
+            'roce': to_float(company.roce),
+            'roe': to_float(company.roe),
+            'compounded_profit_growth_5yr': to_float(profit_growth_5yr_val),
+            'industry': company.industry_classification.name if company.industry_classification else 'N/A',
+            'market_cap_category': market_cap_category,
+        })
+
+    strong_companies_categorized.sort(key=lambda x: (
+        {'Large Cap': 0, 'Mid Cap': 1, 'Small Cap': 2}.get(x['market_cap_category'], 3),
+        x['market_cap'] if x['market_cap'] is not None else float('-inf')
+    ), reverse=True)
+
+    return JsonResponse(strong_companies_categorized, safe=False)
+
+
+# NEW API endpoint for Undervalued Stocks
+def undervalued_companies_api(request):
+    """
+    Returns a list of companies identified as undervalued based on default criteria.
+    """
+    filters = Q()
+
+    # Default "Undervalued" criteria
+    filters &= Q(stock_pe__lte=decimal.Decimal(15)) # Lower P/E
+    filters &= Q(dividend_yield__gte=decimal.Decimal(1.0)) # Decent dividend yield
+    filters &= Q(market_cap__isnull=False) # Ensure market cap exists for basic context
+
+    companies_queryset = Company.objects.filter(filters).order_by('name')
+
+    undervalued_list = []
+    for company in companies_queryset:
+        price_to_book = None
+        if company.current_price is not None and company.book_value is not None and company.book_value != 0:
+            try:
+                price_to_book = company.current_price / company.book_value
+            except decimal.InvalidOperation:
+                pass
+        
+        # Apply Price to Book filter for Undervalued
+        if price_to_book is None or price_to_book > decimal.Decimal(2): # P/B < 2
+            continue
+
+        undervalued_list.append({
+            'name': company.name,
+            'symbol': company.symbol,
+            'market_cap': to_float(company.market_cap),
+            'current_price': to_float(company.current_price),
+            'stock_pe': to_float(company.stock_pe),
+            'book_value': to_float(company.book_value),
+            'price_to_book': to_float(price_to_book),
+            'dividend_yield': to_float(company.dividend_yield),
+            'roce': to_float(company.roce), # Include for context
+            'roe': to_float(company.roe),   # Include for context
+            'industry': company.industry_classification.name if company.industry_classification else 'N/A',
+        })
+    
+    # Sort by P/E ascending for undervalued stocks
+    undervalued_list.sort(key=lambda x: x['stock_pe'] if x['stock_pe'] is not None else float('inf'))
+
+    return JsonResponse(undervalued_list, safe=False)
+
+
+# Consolidating the comprehensive screener API into fundamentals/views.py
+def fundamental_screener_api(request):
+    """
+    API endpoint to filter companies based on user-defined fundamental criteria.
+    This is for the dedicated custom screener page within the fundamentals app.
+    """
+    filters = Q()
+
+    min_roce_str = request.GET.get('min_roce')
+    if min_roce_str:
+        try:
+            min_roce_val = decimal.Decimal(min_roce_str)
+            filters &= Q(roce__gte=min_roce_val)
+        except decimal.InvalidOperation:
+            pass
+
+    min_roe_str = request.GET.get('min_roe')
+    if min_roe_str:
+        try:
+            min_roe_val = decimal.Decimal(min_roe_str)
+            filters &= Q(roe__gte=min_roe_val)
+        except decimal.InvalidOperation:
+            pass
+
+    max_pe_str = request.GET.get('max_pe')
+    if max_pe_str:
+        try:
+            max_pe_val = decimal.Decimal(max_pe_str)
+            filters &= Q(stock_pe__lte=max_pe_val)
+        except decimal.InvalidOperation:
+            pass
+    
+    industry_id = request.GET.get('industry')
+    if industry_id:
+        try:
+            filters &= Q(industry_classification__id=int(industry_id))
+        except ValueError:
+            pass
+
+    companies_queryset = Company.objects.filter(filters).order_by('symbol')
+
+    results = []
+    for company in companies_queryset:
+        price_to_book = None
+        if company.current_price is not None and company.book_value is not None and company.book_value != 0:
+            try:
+                price_to_book = company.current_price / company.book_value
+            except decimal.InvalidOperation:
+                pass
+        
+        max_pb_str = request.GET.get('max_pb')
+        if max_pb_str:
+            try:
+                max_pb_val = decimal.Decimal(max_pb_str)
+                if price_to_book is None or price_to_book > max_pb_val:
+                    continue
+            except decimal.InvalidOperation:
+                pass
+
+        profit_growth_5yr_val = get_json_value(company.compounded_profit_growth, '5 Years')
+        min_profit_growth_5yr_str = request.GET.get('min_profit_growth_5yr')
+        if min_profit_growth_5yr_str:
+            try:
+                min_profit_growth_5yr_val_dec = decimal.Decimal(min_profit_growth_5yr_str)
+                if profit_growth_5yr_val is None or profit_growth_5yr_val < min_profit_growth_5yr_val_dec:
+                    continue
+            except decimal.InvalidOperation:
+                pass
+
+        results.append({
+            'name': company.name,
+            'symbol': company.symbol,
+            'market_cap': to_float(company.market_cap),
+            'current_price': to_float(company.current_price),
+            'stock_pe': to_float(company.stock_pe),
+            'book_value': to_float(company.book_value),
+            'price_to_book': to_float(price_to_book),
+            'dividend_yield': to_float(company.dividend_yield),
+            'roce': to_float(company.roce),
+            'roe': to_float(company.roe),
+            'compounded_profit_growth_5yr': to_float(profit_growth_5yr_val),
+            'industry': company.industry_classification.name if company.industry_classification else 'N/A',
+        })
+    
+    sort_by = request.GET.get('sort_by')
+    order = request.GET.get('order', 'asc')
+
+    if sort_by:
+        sortable_fields = {
+            'name': 'name', 'symbol': 'symbol', 'market_cap': 'market_cap',
+            'current_price': 'current_price', 'stock_pe': 'stock_pe',
+            'book_value': 'book_value', 'price_to_book': 'price_to_book',
+            'dividend_yield': 'dividend_yield', 'roce': 'roce', 'roe': 'roe',
+            'compounded_profit_growth_5yr': 'compounded_profit_growth_5yr',
+        }
+        
+        if sort_by in sortable_fields:
+            if order == 'asc':
+                results.sort(key=lambda x: x.get(sortable_fields[sort_by]) if x.get(sortable_fields[sort_by]) is not None else float('inf'))
+            else:
+                results.sort(key=lambda x: x.get(sortable_fields[sort_by]) if x.get(sortable_fields[sort_by]) is not None else float('-inf'), reverse=True)
+                
+    return JsonResponse(results, safe=False)

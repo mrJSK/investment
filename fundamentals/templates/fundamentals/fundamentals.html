@@ -1,168 +1,318 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ page_title }}</title>
+
+    {# Tailwind CSS CDN #}
     <script src="https://cdn.tailwindcss.com"></script>
+    {# Font Awesome for icons #}
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
     />
+    {# Google Fonts - Inter #}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
     <style>
+      /* Base Styles - Aligned with dashboard.html and home.html */
       body {
         font-family: "Inter", sans-serif;
-        background-color: #f0f2f5; /* Light gray background */
+        background-color: #111827; /* Darkest background */
+        color: #d1d5db; /* Light text color */
       }
-      .container-wrapper {
-        display: flex;
-        min-height: 100vh; /* Full viewport height */
-      }
-      .sidebar {
-        width: 280px; /* Fixed width sidebar */
-        background-color: #1f2937; /* Dark gray */
-        padding: 1rem;
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-        overflow-y: auto; /* Scrollable sidebar */
-        flex-shrink: 0; /* Prevent sidebar from shrinking */
-      }
-      .main-content-area {
-        flex-grow: 1; /* Main content takes remaining space */
-        padding: 1.5rem;
-        background-color: #f0f2f5; /* Light gray background */
-        overflow-y: auto; /* Make main content scrollable */
-      }
-      .card {
-        background-color: #ffffff;
-        border-radius: 0.75rem; /* rounded-xl */
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-        margin-bottom: 1.5rem; /* Space between cards */
-      }
-      .header-bg {
-        background-color: #4f46e5; /* Indigo-600 */
-        color: #ffffff;
-      }
-      .section-header {
-        background-color: #e0e7ff; /* Indigo-100 */
-        color: #4338ca; /* Indigo-700 */
-        border-bottom: 1px solid #c7d2fe; /* Indigo-200 */
-      }
-      .score-9-plus {
-        background-color: #d1fae5; /* Green-100 */
-        color: #065f46; /* Green-800 */
-      }
-      .score-8-below {
-        background-color: #ffe4e6; /* Red-100 */
-        color: #991b1b; /* Red-800 */
-      }
-      .table-header th {
-        padding-top: 0.75rem;
-        padding-bottom: 0.75rem;
-        text-align: left;
-        font-size: 0.75rem; /* text-xs */
-        font-weight: 500; /* font-medium */
-        color: #6b7280; /* gray-500 */
-        text-transform: uppercase;
-        letter-spacing: 0.05em; /* tracking-wider */
-      }
-      .table-row td {
-        padding-top: 0.75rem;
-        padding-bottom: 0.75rem;
-        font-size: 0.875rem; /* text-sm */
-        color: #1f2937; /* gray-900 */
-      }
-      .table-row:nth-child(odd) {
-        background-color: #f9fafb; /* gray-50 */
-      }
-      /* Custom scrollbar for deep-dive tables */
+      /* Custom scrollbar */
       .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
         height: 8px;
-        background-color: #374151; /* Darker gray for track */
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #1f2937; /* gray-800 */
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: #4f46e5; /* Indigo-600 for thumb */
-        border-radius: 4px;
+        background-color: #4b5563; /* gray-600 */
+        border-radius: 10px;
+        border: 3px solid #1f2937;
       }
-      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background-color: #6366f1; /* Lighter indigo on hover */
+      body::-webkit-scrollbar {
+        display: none;
+      } /* Hide body scrollbar */
+      body {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
-      .section-title {
-        @apply text-xl font-semibold text-gray-800 mb-4 pb-2 border-b-2 border-indigo-400 flex items-center;
+
+      /* General Typography */
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: #e0e0f0;
+      } /* Slightly lighter for headings */
+      a {
+        color: #2dd4bf; /* teal-400 */
+        transition: color 0.2s ease;
+      } /* Default link color */
+      a:hover {
+        color: #06b6d4; /* cyan-500 */
+      } /* Hover for links */
+
+      /* Table Styling */
+      .table-header-cell {
+        background-color: #1f2937; /* gray-800 */
+        color: #9ca3af; /* gray-400 */
+        text-transform: uppercase;
+        font-size: 0.75rem; /* text-xs */
+        font-weight: 600; /* font-semibold */
+        letter-spacing: 0.05em;
+        cursor: pointer;
       }
-      .section-title .fa-icon {
-        @apply text-indigo-500 mr-2;
+      .table-body-row:nth-child(odd) {
+        background-color: #1a2434; /* Custom subtle alternate row */
       }
-      @media (max-width: 768px) {
-        .container-wrapper {
-          flex-direction: column;
-        }
-        .sidebar {
-          width: 100%;
-          height: 300px; /* Fixed height for sidebar on mobile */
-        }
-        .main-content-area {
-          padding: 1rem;
-        }
+      .table-body-row:nth-child(even) {
+        background-color: #1f2937; /* gray-800 */
+      }
+      .table-body-row:hover {
+        background-color: #334155; /* blue-gray-700, slightly more distinct hover */
+        color: #e0e0f0;
+      }
+      .table-body-cell {
+        padding: 14px 16px; /* Increased cell padding */
+        font-size: 0.9em;
+        color: #d1d5db;
+      }
+
+      /* Loading Indicator */
+      .loading {
+        color: #9ca3af; /* gray-400 */
+        font-size: 1.2em;
+        display: none;
       }
     </style>
   </head>
-  <body class="p-0 m-0">
-    <div class="container-wrapper">
-      <!-- Left Sidebar: Company List -->
-      <div class="sidebar">
-        <h2 class="text-xl font-bold text-white mb-4">Companies</h2>
-        <div class="relative mb-4">
-          <input
-            type="text"
-            id="search-input"
-            placeholder="Search companies..."
-            class="w-full p-2 pl-10 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <div class="absolute inset-y-0 left-0 flex items-center pl-3">
-            <i class="fas fa-search text-gray-400"></i>
-          </div>
-        </div>
-        <ul id="company-list" class="space-y-2">
-          <!-- Company list will be loaded here by JavaScript -->
-          <li class="p-3 text-sm text-center text-gray-400">
-            Loading companies...
-          </li>
-        </ul>
+  <body class="min-h-screen">
+    <div class="main-content p-8 overflow-y-auto custom-scrollbar min-h-screen">
+      <h1 class="text-4xl font-extrabold mb-6 text-teal-400">
+        {{ page_title }}
+      </h1>
+      <p class="text-lg text-gray-400 mb-6 leading-relaxed">
+        Discover fundamentally strong companies categorized by market
+        capitalization. For advanced filtering and custom criteria, please visit
+        the
+        <a
+          href="{% url 'fundamentals:custom_screener_page' %}"
+          class="font-semibold hover:underline text-blue-400"
+          >Advanced Screener</a
+        >
+        page.
+      </p>
+
+      {# Search Bar #}
+      <div class="mb-8 bg-gray-800 rounded-xl p-4 shadow-lg flex items-center">
+        <i class="fas fa-search text-gray-400 mr-3 text-lg"></i>
+        <input
+          type="text"
+          id="company_search_input"
+          placeholder="Search by company name or symbol..."
+          class="flex-1 bg-transparent text-gray-100 placeholder-gray-500 text-lg focus:outline-none focus:ring-0 border-none p-0"
+        />
       </div>
 
-      <!-- Main Content Area -->
-      <div class="main-content-area">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">
-          {{ page_title }}
-        </h1>
+      {# Fundamentally Strong Companies Table #}
+      <h2 class="text-3xl font-bold mb-6 text-emerald-400">
+        Fundamentally Strong Companies
+      </h2>
+      <div class="loading text-center py-8" id="loading_indicator_strong">
+        <i class="fas fa-spinner fa-spin text-4xl mb-4"></i>
+        <p>Loading strong companies...</p>
+      </div>
 
-        <div id="loading-spinner" class="hidden text-center py-8">
-          <i class="fas fa-spinner fa-spin text-indigo-500 fa-3x"></i>
-          <p class="text-gray-600 mt-2">Loading data...</p>
-        </div>
-
-        <div
-          id="error-message"
-          class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md relative mb-6"
-          role="alert"
+      <div
+        class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-700 mb-12"
+      >
+        {# Added mb-12 for spacing #}
+        <table
+          id="strong_companies_table"
+          class="min-w-full divide-y divide-gray-700"
         >
-          <strong class="font-bold">Error!</strong>
-          <span class="block sm:inline" id="error-message-text"></span>
-        </div>
+          <thead class="bg-gray-900">
+            <tr>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="market_cap_category"
+              >
+                Category
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="name"
+              >
+                Company Name
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="symbol"
+              >
+                Symbol
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="market_cap"
+              >
+                Mar Cap (Cr.)
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="current_price"
+              >
+                CMP
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="stock_pe"
+              >
+                P/E
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="book_value"
+              >
+                Book Value
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="price_to_book"
+              >
+                P/B
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="dividend_yield"
+              >
+                Div. Yld (%)
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="roce"
+              >
+                ROCE (%)
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="roe"
+              >
+                ROE (%)
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="compounded_profit_growth_5yr"
+              >
+                5Y Pft Gr (%)
+              </th>
+              <th class="px-6 py-3 text-left table-header-cell">Industry</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800"></tbody>
+        </table>
+      </div>
 
-        <!-- Content for Fundamental Screener -->
-        <div id="fundamental-screener-content">
-          <!-- This content will be populated by JS from fundamental_screener_api -->
-        </div>
+      {# Undervalued Companies Table #}
+      <h2 class="text-3xl font-bold mb-6 text-blue-400">
+        Undervalued Companies
+      </h2>
+      <div class="loading text-center py-8" id="loading_indicator_undervalued">
+        <i class="fas fa-spinner fa-spin text-4xl mb-4"></i>
+        <p>Loading undervalued companies...</p>
+      </div>
 
-        <!-- Content for Deep Dive (hidden by default) -->
-        <div id="deep-dive-content" class="hidden">
-          <!-- This content will be populated by JS from company_detail_api -->
-        </div>
+      <div
+        class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-700"
+      >
+        <table
+          id="undervalued_companies_table"
+          class="min-w-full divide-y divide-gray-700"
+        >
+          <thead class="bg-gray-900">
+            <tr>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="name"
+              >
+                Company Name
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="symbol"
+              >
+                Symbol
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="market_cap"
+              >
+                Mar Cap (Cr.)
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="current_price"
+              >
+                CMP
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="stock_pe"
+              >
+                P/E
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="book_value"
+              >
+                Book Value
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="price_to_book"
+              >
+                P/B
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="dividend_yield"
+              >
+                Div. Yld (%)
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="roce"
+              >
+                ROCE (%)
+              </th>
+              <th
+                class="px-6 py-3 text-left table-header-cell"
+                data-sort-by="roe"
+              >
+                ROE (%)
+              </th>
+              <th class="px-6 py-3 text-left table-header-cell">Industry</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800"></tbody>
+        </table>
       </div>
     </div>
 
-    <script src="/static/fundamentals/js/fundamentals_dashboard.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{% static 'fundamentals/js/fundamentals_dashboard.js' %}"></script>
   </body>
 </html>

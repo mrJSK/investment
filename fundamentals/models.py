@@ -1,187 +1,73 @@
-# # fundamentals/models.py
-
-# from django.db import models
-
-# class Company(models.Model):
-#     # Core Info
-#     name = models.CharField(max_length=255)
-#     symbol = models.CharField(max_length=100, unique=True, primary_key=True)
-#     about = models.TextField(null=True, blank=True)
-#     website = models.URLField(null=True, blank=True)
-
-#     # Key Ratios
-#     market_cap = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-#     current_price = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-#     high_low = models.CharField(max_length=100, null=True, blank=True)
-#     stock_pe = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-#     book_value = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-#     dividend_yield = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-#     roce = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-#     roe = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-#     face_value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
-#     # Ensure this field is added
-#     industry_classification = models.CharField(max_length=500, null=True, blank=True, db_index=True)
-
-#     # Analysis
-#     pros = models.JSONField(default=list, null=True, blank=True)
-#     cons = models.JSONField(default=list, null=True, blank=True)
-
-#     # Financial Data Tables (as JSON)
-#     peer_comparison = models.JSONField(default=list, null=True, blank=True)
-#     quarterly_results = models.JSONField(default=list, null=True, blank=True)
-#     profit_loss_statement = models.JSONField(default=list, null=True, blank=True)
-#     balance_sheet = models.JSONField(default=list, null=True, blank=True)
-#     cash_flow_statement = models.JSONField(default=list, null=True, blank=True)
-#     ratios = models.JSONField(default=list, null=True, blank=True)
-
-#     # Growth Tables & Shareholding (as JSON)
-#     compounded_sales_growth = models.JSONField(default=dict, null=True, blank=True)
-#     compounded_profit_growth = models.JSONField(default=dict, null=True, blank=True)
-#     stock_price_cagr = models.JSONField(default=dict, null=True, blank=True)
-#     return_on_equity = models.JSONField(default=dict, null=True, blank=True)
-#     shareholding_pattern = models.JSONField(default=dict, null=True, blank=True)
-
-#     # Timestamps
-#     last_updated = models.DateTimeField(auto_now=True)
-#     created_at = models.DateTimeField(auto_now_add=True)
-
-#     def __str__(self):
-#         return f"{self.name} ({self.symbol})"
-
-#     class Meta:
-#         verbose_name_plural = "Companies"
-#         ordering = ['name']
-
 # fundamentals/models.py
-
-import uuid
 from django.db import models
 
 class IndustryClassification(models.Model):
-    """
-    Stores industry classifications in a hierarchical structure.
-    e.g., 'Industrial Minerals' -> 'Minerals & Mining' -> 'Commodities'
-    """
-    name = models.CharField(max_length=255)
-    # Self-referencing key to create the parent-child tree structure.
-    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
+    name = models.CharField(max_length=255, unique=True)
+    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_industries')
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         verbose_name_plural = "Industry Classifications"
-        # Ensures no duplicate categories under the same parent.
-        unique_together = ('name', 'parent') 
-
-    def __str__(self):
-        """
-        Builds the full breadcrumb path for display in the Django admin.
-        e.g., "Commodities > Metals & Mining > Industrial Minerals"
-        """
-        path = [self.name]
-        p = self.parent
-        while p:
-            path.insert(0, p.name)
-            p = p.parent
-        return ' > '.join(path)
 
 class Company(models.Model):
-    # Core Info
     name = models.CharField(max_length=255)
-    symbol = models.CharField(max_length=100, unique=True, primary_key=True)
-    about = models.TextField(null=True, blank=True)
-    website = models.URLField(null=True, blank=True)
-    bse_code = models.CharField(max_length=50, null=True, blank=True)
-    nse_code = models.CharField(max_length=50, null=True, blank=True)
-
-    # Key Ratios
+    # CORRECTED: Added primary_key=True to the symbol field
+    symbol = models.CharField(max_length=50, unique=True, primary_key=True)
+    about = models.TextField(blank=True, null=True)
+    website = models.URLField(blank=True, null=True)
+    bse_code = models.CharField(max_length=20, blank=True, null=True)
+    nse_code = models.CharField(max_length=20, blank=True, null=True)
+    
+    # Financial metrics - using DecimalField for precision
     market_cap = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-    current_price = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-    high_low = models.CharField(max_length=100, null=True, blank=True)
+    current_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    high_low = models.CharField(max_length=50, blank=True, null=True) # Max/Min price over a period
     stock_pe = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    book_value = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-    dividend_yield = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    roce = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    roe = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    book_value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    dividend_yield = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    roce = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True) # Return on Capital Employed
+    roe = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)  # Return on Equity
     face_value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
-    # Links each company to its most specific industry category.
-    industry_classification = models.ForeignKey(
-        IndustryClassification, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True
-    )
+    # Pros and Cons (JSON data from scraping)
+    pros = models.JSONField(null=True, blank=True)
+    cons = models.JSONField(null=True, blank=True)
+    
+    # Peer Comparison (complex JSON structure)
+    peer_comparison = models.JSONField(null=True, blank=True)
+    
+    # Quarterly Results, P&L, Balance Sheet, Cash Flow (complex JSON structures)
+    quarterly_results = models.JSONField(null=True, blank=True)
+    profit_loss_statement = models.JSONField(null=True, blank=True)
+    balance_sheet = models.JSONField(null=True, blank=True)
+    cash_flow_statement = models.JSONField(null=True, blank=True)
+    ratios = models.JSONField(null=True, blank=True)
 
-    # Analysis
-    pros = models.JSONField(default=list, null=True, blank=True)
-    cons = models.JSONField(default=list, null=True, blank=True)
+    # Compounded Growth and Return on Equity (JSON strings with periods like "3 Years", "5 Years")
+    compounded_sales_growth = models.JSONField(null=True, blank=True)
+    compounded_profit_growth = models.JSONField(null=True, blank=True)
+    stock_price_cagr = models.JSONField(null=True, blank=True)
+    return_on_equity = models.JSONField(null=True, blank=True)
+    
+    shareholding_pattern = models.JSONField(null=True, blank=True)
 
-    # Financial Data Tables (as JSON)
-    peer_comparison = models.JSONField(default=list, null=True, blank=True)
-    quarterly_results = models.JSONField(default=list, null=True, blank=True)
-    profit_loss_statement = models.JSONField(default=list, null=True, blank=True)
-    balance_sheet = models.JSONField(default=list, null=True, blank=True)
-    cash_flow_statement = models.JSONField(default=list, null=True, blank=True)
-    ratios = models.JSONField(default=list, null=True, blank=True)
-
-    # Growth Tables & Shareholding (as JSON)
-    compounded_sales_growth = models.JSONField(default=dict, null=True, blank=True)
-    compounded_profit_growth = models.JSONField(default=dict, null=True, blank=True)
-    stock_price_cagr = models.JSONField(default=dict, null=True, blank=True)
-    return_on_equity = models.JSONField(default=dict, null=True, blank=True)
-    shareholding_pattern = models.JSONField(default=dict, null=True, blank=True)
-
-    # Timestamps
     last_updated = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Foreign key to IndustryClassification
+    industry_classification = models.ForeignKey(
+        IndustryClassification,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='companies'
+    )
+
     def __str__(self):
-        return f"{self.name} ({self.symbol})"
+        return self.name
 
     class Meta:
         verbose_name_plural = "Companies"
-        ordering = ['name']
-
-class FundamentalData(models.Model):
-    """
-    Stores key dynamic/daily fundamental metrics for a company.
-    Linked by a ForeignKey to the Company model.
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    company = models.ForeignKey(
-        Company, 
-        on_delete=models.CASCADE, 
-        related_name='daily_fundamental_data' # <--- THIS IS THE CRITICAL CHANGE
-    )
-    date = models.DateField(db_index=True) # Date the data was recorded/scraped
-
-    # Key daily/frequently updated ratios
-    market_cap = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-    current_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    high_52_week = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    low_52_week = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    stock_pe = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    book_value = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-    dividend_yield = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    roc = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True) # Return on Capital Employed
-    roe = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True) # Return on Equity
-    sales_growth_3_years = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    profit_growth_3_years = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    debt_to_equity = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    cash_conversion_cycle = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    
-    # Store raw data fetched from scraper, might contain other fields not explicitly modeled
-    raw_data = models.JSONField(null=True, blank=True, help_text="Raw JSON data of daily scrape")
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = ('company', 'date')
-        # Order by company, then latest date first to easily retrieve latest fundamental data
-        ordering = ['company', '-date'] 
-        verbose_name_plural = "Fundamental Data"
-
-    def __str__(self):
-        return f"{self.company.symbol} - {self.date} Fundamentals"
-
+        # ordering = ['name'] # You had this in a previous version, keep if desired
